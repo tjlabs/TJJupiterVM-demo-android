@@ -1,0 +1,27 @@
+# Android/Gradle
+.gradle/
+build/
+**/build/
+.cxx/
+.externalNativeBuild/
+
+# Local SDK and secrets
+local.properties
+*.keystore
+*.jks
+
+# IDE
+.idea/
+*.iml
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+
+# Kotlin/Java
+*.class
+
+# Optional captured outputs
+captures/
