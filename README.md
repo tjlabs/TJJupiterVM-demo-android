@@ -2,75 +2,189 @@
 
 ## Overview
 
-`TJJupiterVM-demo-android` is a demo app for integrating `TJJupiterVMUI-sdk-android` from `mavenLocal`.
+TJJupiterVM-demo-android is a minimal Android sample app for integrating **TJLabs Jupiter VM SDK (AAR)**.
 
-This app follows the sample flow from `TJJupiter-demo-android` and the VMUI SDK sample app:
-- runtime permission request
-- `AUTH` -> `SDK Init` -> `SDK Start`
-- attach/detach VMUI view
-- stop SDK and release resources
-- simulation/upload/route-driving toggles
+<!-- JUPITER_SDK_VERSION_START -->
+Jupiter SDK version: 2.0.7
+<!-- JUPITER_SDK_VERSION_END -->
 
-## Maven Local First
+<!-- JUPITER_VM_SDK_VERSION_START -->
+Jupiter VM SDK (AAR): TJJupiterVM-sdk-android-1.0.0
+<!-- JUPITER_VM_SDK_VERSION_END -->
 
-This project resolves dependencies with `mavenLocal()` first.
+The app demonstrates a simple VM service lifecycle with:
+- Authentication (`AUTH`)
+- Service initialize (`SDK Init`)
+- Service start (`SDK Start`)
+- View attach/detach (`뷰 보기` / `뷰 종료`)
+- Service stop (`SDK 종료`)
+- Parking location APIs (`setSavedParkingLocations`, `setVacantParkingLocations`)
 
-`settings.gradle.kts`
-- `pluginManagement.repositories`: includes `mavenLocal()`
-- `dependencyResolutionManagement.repositories`: `google()`, `mavenLocal()`, `mavenCentral()`, `jitpack`
+## Features
 
-## Prerequisite: Publish SDK to mavenLocal
+- VM SDK auth/init/start/stop flow example
+- WebView frame attach/detach flow
+- Runtime permission request flow
+- Parking-space tap callback handling
+- Hardcoded vacant parking update button (`빈주차 업데이트`)
 
-In `TJJupiterVMUI-sdk-android` repository:
+## Requirements
 
-```bash
-./gradlew :sdk:publishReleasePublicationToMavenLocal
+- Android `minSdk 26+`
+- Android Studio (latest stable recommended)
+- Kotlin-based Android app
+
+### Required permissions
+
+Declare in `AndroidManifest.xml`:
+
+- `android.permission.INTERNET`
+- `android.permission.ACCESS_NETWORK_STATE`
+- `android.permission.ACCESS_FINE_LOCATION`
+- `android.permission.BLUETOOTH` (Android 11 and below)
+- `android.permission.BLUETOOTH_ADMIN` (Android 11 and below)
+- `android.permission.BLUETOOTH_SCAN` (Android 12+)
+
+Runtime permission check in this demo requires:
+- Location (`FINE`)
+- Bluetooth scan on Android 12+
+
+## Setup
+
+### 1. Add repositories
+
+```kotlin
+// settings.gradle.kts
+pluginManagement {
+    repositories {
+        google()
+        mavenCentral()
+        mavenLocal()
+        gradlePluginPortal()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        google()
+        mavenLocal()
+        mavenCentral()
+        maven("https://jitpack.io")
+    }
+}
 ```
 
-Published coordinates used by this demo:
-- `groupId`: `com.tjlabs`
-- `artifactId`: `TJJupiterVMUI-sdk-android`
-- `version`: default `0.0.1` (or your published version)
+### 2. Place VM AAR
 
-## Configure Demo App
+Copy AAR file into:
 
-### 1) Set SDK version
-
-In this demo app, set Gradle property (recommended in `~/.gradle/gradle.properties` or project `gradle.properties`):
-
-```properties
-JUPITER_VM_SDK_VERSION=0.0.1
+```text
+app/libs/TJJupiterVM-sdk-android-0.0.1.aar
 ```
 
-If omitted, app defaults to `0.0.1`.
+If file name changes, update `jupiterVmAarName` in `app/build.gradle.kts`.
 
-### 2) Set auth keys
+### 3. Add dependencies
 
-Add in `local.properties` (or as Gradle properties):
+```kotlin
+// app/build.gradle.kts
+dependencies {
+    implementation(files("libs/TJJupiterVM-sdk-android-0.0.1.aar"))
+    implementation("com.github.tjlabs:TJLabsJupiter-sdk-android:2.0.7")
+}
+```
+
+## Quick Guide
+
+### 1. Configure credentials
+
+Set in `local.properties`:
 
 ```properties
+sdk.dir=/Users/your_name/Library/Android/sdk
 AUTH_ACCESS_KEY=YOUR_ACCESS_KEY
 AUTH_SECRET_ACCESS_KEY=YOUR_SECRET_ACCESS_KEY
 ```
 
-## Dependency
+### 2. Authenticate
 
-`app/build.gradle.kts`
+Input:
+- `accessKey: String`
+- `accessSecretKey: String`
+
+Output:
+- callback `(code: Int, success: Boolean)`
 
 ```kotlin
-implementation("com.tjlabs:TJJupiterVMUI-sdk-android:$jupiterVmSdkVersion")
+TJJupiterVMAuth.auth(application, accessKey, accessSecretKey) { code, success ->
+    // handle auth result
+}
 ```
 
-## Run Flow
+### 3. Initialize service
 
-1. Launch app and grant required permissions
-2. Tap `SDK Init`
-3. Tap `SDK Start`
-4. Tap `뷰 보기` to attach VMUI frame
-5. Use `뷰 종료` / `SDK 종료` to clean up
+Input:
+- `userId: String`
+- `sectorId: Int`
+- `region: JupiterRegion` (this demo uses `JupiterRegion.KOREA`)
+- `delegate: TJJupiterVMView.TJJupiterVMViewDelegate`
 
-## Notes
+Output:
+- `onInitSuccess(isSuccess, code)`
 
-- Sample `sectorId` is set to `20`.
-- URL override is supported through the URL input field before init.
-- Parking-space tap callback opens a confirmation bottom sheet and calls `setSavedParkingLocations`.
+```kotlin
+vmnaviView.initialize(
+    application,
+    userId,
+    sectorId,
+    JupiterRegion.KOREA,
+    delegate
+)
+```
+
+### 4. Start service
+
+Input:
+- `mode: UserMode` (this demo uses `UserMode.MODE_VEHICLE`)
+
+Output:
+- `onJupiterSuccess(isSuccess, code)`
+- `onJupiterResult(result)`
+
+```kotlin
+vmnaviView.startService(UserMode.MODE_VEHICLE)
+```
+
+### 5. Show / close VM view
+
+```kotlin
+vmnaviView.configureFrame(vmnaviContainer) // show
+vmnaviView.closeFrame()                     // close
+```
+
+### 6. Stop service
+
+```kotlin
+vmnaviView.stopService()
+vmnaviView.closeFrame()
+```
+
+### 7. Parking APIs in this demo
+
+Saved parking example:
+
+```kotlin
+vmnaviView.setSavedParkingLocations(listOf("OB-..."))
+```
+
+Vacant parking update example (hardcoded button):
+
+```kotlin
+val parkingLevelId = 52
+val updatedVacantParkingLocations = mapOf(
+    "OB-1h82101id68tx3548" to TJJupiterVMModel.ParkingLocationState.VACANT,
+    "OB-1h7zbmxfa10z93809" to TJJupiterVMModel.ParkingLocationState.VACANT,
+    "OB-1h84se62jidlw3811" to TJJupiterVMModel.ParkingLocationState.VACANT
+)
+```
