@@ -1,4 +1,4 @@
-package com.tjlabs.tjjupitervmui_demo_android
+package com.tjlabs.tjjupitervm_demo_android
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -7,12 +7,10 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.Button
-import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.SwitchCompat
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.tjlabs.tjlabscommon_sdk_android.uvd.UserMode
@@ -42,7 +40,6 @@ class MainActivity : AppCompatActivity() {
         val userId = "demo_user"
 
         val vmnaviContainer = findViewById<FrameLayout>(R.id.vmnaviContainer)
-        val editUrlInput = findViewById<EditText>(R.id.editUrl)
         val parkingSelectionOverlay = findViewById<FrameLayout>(R.id.parkingSelectionOverlay)
         val parkingSelectionSheet = findViewById<View>(R.id.parkingSelectionSheet)
         val selectedParkingIdText = findViewById<TextView>(R.id.textSelectedParkingId)
@@ -50,21 +47,8 @@ class MainActivity : AppCompatActivity() {
         val buttonParkingSheetConfirm = findViewById<Button>(R.id.buttonParkingSheetConfirm)
 
         vmnaviView = TJJupiterVMUIView(this)
-        val simulationSwitch = findViewById<SwitchCompat>(R.id.switchSimulation)
-        val uploadSwitch = findViewById<SwitchCompat>(R.id.switchUploadData)
-        val routeDrivingSwitch = findViewById<SwitchCompat>(R.id.switchRouteDriving)
-
-        vmnaviView.setTelemetryUploadEnabled(uploadSwitch.isChecked)
-        uploadSwitch.setOnCheckedChangeListener { _, isChecked ->
-            vmnaviView.setTelemetryUploadEnabled(isChecked)
-            val modeText = if (isChecked) "ON" else "OFF"
-            Toast.makeText(this, "업로드 모드: $modeText", Toast.LENGTH_SHORT).show()
-        }
-
-        routeDrivingSwitch.setOnCheckedChangeListener { _, isChecked ->
-            val modeText = if (isChecked) "ON" else "OFF"
-            Toast.makeText(this, "경로 주행 모드: $modeText", Toast.LENGTH_SHORT).show()
-        }
+        vmnaviView.setTelemetryUploadEnabled(false)
+        vmnaviView.setSimulationEnabled(false)
 
         val hideParkingSheet = {
             pendingParkingSpaceId = null
@@ -90,19 +74,6 @@ class MainActivity : AppCompatActivity() {
             hideParkingSheet()
         }
 
-        if (BuildConfig.DEBUG) {
-            simulationSwitch.visibility = View.VISIBLE
-            vmnaviView.setSimulationEnabled(simulationSwitch.isChecked)
-            simulationSwitch.setOnCheckedChangeListener { _, isChecked ->
-                vmnaviView.setSimulationEnabled(isChecked)
-                val modeText = if (isChecked) "ON" else "OFF"
-                Toast.makeText(this, "시뮬레이션 모드: $modeText", Toast.LENGTH_SHORT).show()
-            }
-        } else {
-            simulationSwitch.visibility = View.GONE
-            vmnaviView.setSimulationEnabled(false)
-        }
-
         findViewById<Button>(R.id.buttonInitSdk).setOnClickListener {
             if (!hasAllRequiredPermissions()) {
                 requestRequiredPermissionsIfNeeded()
@@ -120,13 +91,9 @@ class MainActivity : AppCompatActivity() {
             }
 
             TJJupiterVMUIAuth.auth(application, accessKey, accessSecretKey) { code, success ->
-                Log.d("TJJupiterVMUI-Demo", "auth code : $code // success : $success")
+                Log.d("TJJupiterVM-Demo", "auth code : $code // success : $success")
                 if (success) {
                     Toast.makeText(this, "Auth 성공, SDK init 진행", Toast.LENGTH_SHORT).show()
-                    val configuredUrl = editUrlInput.text.toString()
-                    if (configuredUrl.isNotEmpty()) {
-                        vmnaviView.setUrl(configuredUrl)
-                    }
 
                     vmnaviView.initialize(
                         application,
@@ -186,9 +153,6 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
             vmnaviView.startService(UserMode.MODE_VEHICLE)
-            if (routeDrivingSwitch.isChecked) {
-                vmnaviView.setDestination(52, 233, 211)
-            }
         }
 
         findViewById<Button>(R.id.buttonShowView).setOnClickListener {

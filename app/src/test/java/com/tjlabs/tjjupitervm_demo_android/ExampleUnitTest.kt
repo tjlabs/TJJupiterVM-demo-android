@@ -1,4 +1,4 @@
-package com.tjlabs.tjjupitervmui_demo_android
+package com.tjlabs.tjjupitervm_demo_android
 
 import org.junit.Test
 

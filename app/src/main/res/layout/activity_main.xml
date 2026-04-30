@@ -10,42 +10,8 @@
         android:padding="12dp">
 
         <LinearLayout
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:orientation="horizontal">
-
-            <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/switchSimulation"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="시뮬레이션 모드" />
-
-            <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/switchUploadData"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checked="false"
-                android:text="Upload Data" />
-
-            <androidx.appcompat.widget.SwitchCompat
-                android:id="@+id/switchRouteDriving"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:checked="true"
-                android:text="경로 주행 모드" />
-
-        </LinearLayout>
-
-        <EditText
-            android:id="@+id/editUrl"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="URL" />
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
             android:orientation="horizontal">
 
             <Button

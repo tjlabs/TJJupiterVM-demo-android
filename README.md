@@ -1,8 +1,8 @@
-# TJJupiterVMUI-demo-android
+# TJJupiterVM-demo-android
 
 ## Overview
 
-`TJJupiterVMUI-demo-android` is a demo app for integrating `TJJupiterVMUI-sdk-android` from `mavenLocal`.
+`TJJupiterVM-demo-android` is a demo app for integrating `TJJupiterVMUI-sdk-android` from `mavenLocal`.
 
 This app follows the sample flow from `TJJupiter-demo-android` and the VMUI SDK sample app:
 - runtime permission request
@@ -39,7 +39,7 @@ Published coordinates used by this demo:
 In this demo app, set Gradle property (recommended in `~/.gradle/gradle.properties` or project `gradle.properties`):
 
 ```properties
-JUPITER_VMUI_SDK_VERSION=0.0.1
+JUPITER_VM_SDK_VERSION=0.0.1
 ```
 
 If omitted, app defaults to `0.0.1`.
@@ -58,7 +58,7 @@ AUTH_SECRET_ACCESS_KEY=YOUR_SECRET_ACCESS_KEY
 `app/build.gradle.kts`
 
 ```kotlin
-implementation("com.tjlabs:TJJupiterVMUI-sdk-android:$jupiterVmuiSdkVersion")
+implementation("com.tjlabs:TJJupiterVMUI-sdk-android:$jupiterVmSdkVersion")
 ```
 
 ## Run Flow

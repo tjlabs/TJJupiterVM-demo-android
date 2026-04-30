@@ -22,5 +22,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "TJJupiterVMUI-demo-android"
+rootProject.name = "TJJupiterVM-demo-android"
 include(":app")
