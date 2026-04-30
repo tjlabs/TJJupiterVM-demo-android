@@ -13,21 +13,29 @@ import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
+import com.tjlabs.tjjupitervm_sdk_android.TJJupiterVMAuth
+import com.tjlabs.tjjupitervm_sdk_android.TJJupiterVMModel
+import com.tjlabs.tjjupitervm_sdk_android.TJJupiterVMView
 import com.tjlabs.tjlabscommon_sdk_android.uvd.UserMode
 import com.tjlabs.tjlabsjupiter_sdk_android.api.JupiterRegion
-import com.tjlabs.tjjupitervmui_sdk_android.TJJupterVMModel
-import com.tjlabs.tjjupitervmui_sdk_android.TJJupiterVMUIAuth
-import com.tjlabs.tjjupitervmui_sdk_android.TJJupiterVMUIView
 
 class MainActivity : AppCompatActivity() {
     companion object {
         private const val PERMISSION_REQUEST_CODE = 1001
+        private const val PARKING_LEVEL_ID = 52 //example id
     }
 
     private var isSdkInitCompleted = false
     private var isSdkStarted = false
     private var pendingParkingSpaceId: String? = null
-    private lateinit var vmnaviView: TJJupiterVMUIView
+
+    private val updatedVacantParkingLocations = mapOf(
+        "OB-1h82101id68tx3548" to TJJupiterVMModel.ParkingLocationState.VACANT,
+        "OB-1h7zbmxfa10z93809" to TJJupiterVMModel.ParkingLocationState.VACANT,
+        "OB-1h84se62jidlw3811" to TJJupiterVMModel.ParkingLocationState.VACANT
+    )
+
+    private lateinit var vmnaviView: TJJupiterVMView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,9 +54,7 @@ class MainActivity : AppCompatActivity() {
         val buttonParkingSheetClose = findViewById<Button>(R.id.buttonParkingSheetClose)
         val buttonParkingSheetConfirm = findViewById<Button>(R.id.buttonParkingSheetConfirm)
 
-        vmnaviView = TJJupiterVMUIView(this)
-        vmnaviView.setTelemetryUploadEnabled(false)
-        vmnaviView.setSimulationEnabled(false)
+        vmnaviView = TJJupiterVMView(this)
 
         val hideParkingSheet = {
             pendingParkingSpaceId = null
@@ -90,7 +96,7 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            TJJupiterVMUIAuth.auth(application, accessKey, accessSecretKey) { code, success ->
+            TJJupiterVMAuth.auth(application, accessKey, accessSecretKey) { code, success ->
                 Log.d("TJJupiterVM-Demo", "auth code : $code // success : $success")
                 if (success) {
                     Toast.makeText(this, "Auth 성공, SDK init 진행", Toast.LENGTH_SHORT).show()
@@ -100,10 +106,25 @@ class MainActivity : AppCompatActivity() {
                         userId,
                         sectorId,
                         JupiterRegion.KOREA,
-                        object : TJJupiterVMUIView.TJJupiterVMUIViewDelegate {
+                        object : TJJupiterVMView.TJJupiterVMViewDelegate {
+                            override fun didWebViewRemoved() {
+                                Toast.makeText(this@MainActivity, "web view is removed", Toast.LENGTH_SHORT).show()
+
+                            }
+
+                            override fun isEnteringWardDetected(wardInfo: TJJupiterVMModel.EnteringInfo) {
+
+                            }
+
+                            override fun isParkingLocationTapped(parkingLocationId: String) {
+                                runOnUiThread {
+                                    showParkingSheet(parkingLocationId)
+                                }
+                            }
+
                             override fun onInitSuccess(
                                 isSuccess: Boolean,
-                                code: TJJupterVMModel.InitErrorCode?
+                                code: TJJupiterVMModel.InitErrorCode?
                             ) {
                                 isSdkInitCompleted = isSuccess
                                 if (isSuccess) {
@@ -114,9 +135,13 @@ class MainActivity : AppCompatActivity() {
                                 }
                             }
 
+                            override fun onJupiterResult(result: TJJupiterVMModel.JupiterResult) {
+                                TODO("Not yet implemented")
+                            }
+
                             override fun onJupiterSuccess(
                                 isSuccess: Boolean,
-                                code: TJJupterVMModel.JupiterErrorCode?
+                                code: TJJupiterVMModel.JupiterErrorCode?
                             ) {
                                 isSdkStarted = isSuccess
                                 val message = if (isSuccess) "SDK start 성공" else "SDK start 실패: $code"
@@ -125,18 +150,13 @@ class MainActivity : AppCompatActivity() {
 
                             override fun onWebViewSuccess(
                                 isSuccess: Boolean,
-                                code: TJJupterVMModel.VMErrorCode?
+                                code: TJJupiterVMModel.VMErrorCode?
                             ) {
                                 if (!isSuccess) {
                                     Toast.makeText(this@MainActivity, "WebView 초기화 실패: $code", Toast.LENGTH_SHORT).show()
                                 }
                             }
 
-                            override fun isParkingSpaceTapped(parkingSpaceId: String) {
-                                runOnUiThread {
-                                    showParkingSheet(parkingSpaceId)
-                                }
-                            }
                         }
                     )
                 } else {
@@ -173,6 +193,15 @@ class MainActivity : AppCompatActivity() {
             vmnaviView.closeFrame()
             isSdkStarted = false
             Toast.makeText(this, "SDK 종료", Toast.LENGTH_SHORT).show()
+        }
+
+        findViewById<Button>(R.id.buttonUpdateVacantParking).setOnClickListener {
+            if (!isSdkInitCompleted) {
+                Toast.makeText(this, "SDK init을 먼저 진행해주세요", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            vmnaviView.updateVacantParkingLocations(PARKING_LEVEL_ID, updatedVacantParkingLocations)
+            Toast.makeText(this, "빈 주차면 3개 업데이트 전송", Toast.LENGTH_SHORT).show()
         }
     }
 

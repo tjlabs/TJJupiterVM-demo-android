@@ -24,8 +24,8 @@ val authSecretAccessKey = (
         ?: localProperties.getProperty("AUTH_SECRET_ACCESS_KEY", "")
     ).trim()
 
-val jupiterVmSdkVersion = providers.gradleProperty("JUPITER_VM_SDK_VERSION").orNull
-    ?: "0.0.1"
+val jupiterVmAarName = "TJJupiterVM-sdk-android-1.0.0"
+val jupiterSdkVersion = "2.0.7"
 
 android {
     namespace = "com.tjlabs.tjjupitervm_demo_android"
@@ -33,7 +33,7 @@ android {
 
     defaultConfig {
         applicationId = "com.tjlabs.tjjupitervm_demo_android"
-        minSdk = 29
+        minSdk = 26
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -65,8 +65,8 @@ android {
 }
 
 dependencies {
-    implementation("com.tjlabs:TJJupiterVMUI-sdk-android:$jupiterVmSdkVersion")
-
+    implementation(files("libs/$jupiterVmAarName.aar"))
+    implementation("com.github.tjlabs:TJLabsJupiter-sdk-android:$jupiterSdkVersion")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
