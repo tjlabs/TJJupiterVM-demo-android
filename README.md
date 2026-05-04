@@ -138,7 +138,6 @@ vmnaviView.initialize(
     application,
     userId,
     sectorId,
-    JupiterRegion.KOREA,
     delegate
 )
 ```
