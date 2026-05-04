@@ -125,9 +125,9 @@ TJJupiterVMAuth.auth(application, accessKey, accessSecretKey) { code, success ->
 ### 3. Initialize service
 
 Input:
+- `application: Application`
 - `userId: String`
 - `sectorId: Int`
-- `region: JupiterRegion` (this demo uses `JupiterRegion.KOREA`)
 - `delegate: TJJupiterVMView.TJJupiterVMViewDelegate`
 
 Output:
