@@ -47,16 +47,33 @@ val syncReadmeVersion by tasks.registering {
             end = "<!-- JUPITER_SDK_VERSION_END -->",
             body = "Jupiter SDK version: $jupiterSdkVersion"
         )
-        val updated = replaceBetweenMarkers(
+        val withVmSdk = replaceBetweenMarkers(
             content = withJupiterSdk,
             start = "<!-- JUPITER_VM_SDK_VERSION_START -->",
             end = "<!-- JUPITER_VM_SDK_VERSION_END -->",
             body = "Jupiter VM SDK (AAR): $jupiterVmAarName"
         )
+        val withAarPath = replaceBetweenMarkers(
+            content = withVmSdk,
+            start = "<!-- VM_AAR_PATH_START -->",
+            end = "<!-- VM_AAR_PATH_END -->",
+            body = "app/libs/$jupiterVmAarName.aar"
+        )
+        val updated = replaceBetweenMarkers(
+            content = withAarPath,
+            start = "<!-- APP_DEPENDENCIES_START -->",
+            end = "<!-- APP_DEPENDENCIES_END -->",
+            body = """
+dependencies {
+    implementation(files("libs/$jupiterVmAarName.aar"))
+    implementation("com.github.tjlabs:TJLabsJupiter-sdk-android:$jupiterSdkVersion")
+}
+            """.trimIndent()
+        )
 
         if (original != updated) {
             readmeFile.writeText(updated)
-            println("README.md versions synced: jupiter=$jupiterSdkVersion, vm=$jupiterVmAarName")
+            println("README.md synced: jupiter=$jupiterSdkVersion, vm=$jupiterVmAarName")
         }
     }
 }
@@ -77,4 +94,14 @@ tasks.matching {
         it.name == "preBuild"
 }.configureEach {
     dependsOn(syncReadmeVersion)
+}
+
+subprojects {
+    tasks.matching {
+        it.name == "prepareKotlinBuildScriptModel" ||
+            it.name == "prepareKotlinBuildScriptModelForAndroid" ||
+            it.name == "preBuild"
+    }.configureEach {
+        dependsOn(rootProject.tasks.named("syncReadmeVersion"))
+    }
 }

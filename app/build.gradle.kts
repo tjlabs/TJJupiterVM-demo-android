@@ -25,7 +25,7 @@ val authSecretAccessKey = (
     ).trim()
 
 val jupiterVmAarName = "TJJupiterVM-sdk-android-1.0.0"
-val jupiterSdkVersion = "2.0.7"
+val jupiterSdkVersion = "2.0.10"
 
 android {
     namespace = "com.tjlabs.tjjupitervm_demo_android"

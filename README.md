@@ -5,7 +5,7 @@
 TJJupiterVM-demo-android is a minimal Android sample app for integrating **TJLabs Jupiter VM SDK (AAR)**.
 
 <!-- JUPITER_SDK_VERSION_START -->
-Jupiter SDK version: 2.0.7
+Jupiter SDK version: 2.0.10
 <!-- JUPITER_SDK_VERSION_END -->
 
 <!-- JUPITER_VM_SDK_VERSION_START -->
@@ -80,7 +80,9 @@ dependencyResolutionManagement {
 Copy AAR file into:
 
 ```text
-app/libs/TJJupiterVM-sdk-android-0.0.1.aar
+<!-- VM_AAR_PATH_START -->
+app/libs/TJJupiterVM-sdk-android-1.0.0.aar
+<!-- VM_AAR_PATH_END -->
 ```
 
 If file name changes, update `jupiterVmAarName` in `app/build.gradle.kts`.
@@ -89,10 +91,12 @@ If file name changes, update `jupiterVmAarName` in `app/build.gradle.kts`.
 
 ```kotlin
 // app/build.gradle.kts
+<!-- APP_DEPENDENCIES_START -->
 dependencies {
-    implementation(files("libs/TJJupiterVM-sdk-android-0.0.1.aar"))
-    implementation("com.github.tjlabs:TJLabsJupiter-sdk-android:2.0.7")
+    implementation(files("libs/TJJupiterVM-sdk-android-1.0.0.aar"))
+    implementation("com.github.tjlabs:TJLabsJupiter-sdk-android:2.0.10")
 }
+<!-- APP_DEPENDENCIES_END -->
 ```
 
 ## Quick Guide
