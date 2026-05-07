@@ -105,7 +105,6 @@ class MainActivity : AppCompatActivity() {
                         application,
                         userId,
                         sectorId,
-                        JupiterRegion.KOREA,
                         object : TJJupiterVMView.TJJupiterVMViewDelegate {
                             override fun didWebViewRemoved() {
                                 Toast.makeText(this@MainActivity, "web view is removed", Toast.LENGTH_SHORT).show()
