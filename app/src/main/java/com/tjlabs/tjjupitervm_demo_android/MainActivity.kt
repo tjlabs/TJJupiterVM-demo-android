@@ -17,7 +17,6 @@ import com.tjlabs.tjjupitervm_sdk_android.TJJupiterVMAuth
 import com.tjlabs.tjjupitervm_sdk_android.TJJupiterVMModel
 import com.tjlabs.tjjupitervm_sdk_android.TJJupiterVMView
 import com.tjlabs.tjlabscommon_sdk_android.uvd.UserMode
-import com.tjlabs.tjlabsjupiter_sdk_android.api.JupiterRegion
 
 class MainActivity : AppCompatActivity() {
     companion object {
@@ -65,6 +64,54 @@ class MainActivity : AppCompatActivity() {
             selectedParkingIdText.text = parkingId
             parkingSelectionOverlay.visibility = View.VISIBLE
         }
+        val vmDelegate = object : TJJupiterVMView.TJJupiterVMViewDelegate {
+            override fun didWebViewRemoved() {
+                Toast.makeText(this@MainActivity, "web view is removed", Toast.LENGTH_SHORT).show()
+            }
+
+            override fun isEnteringWardDetected(wardInfo: TJJupiterVMModel.EnteringInfo) {
+            }
+
+            override fun isParkingLocationTapped(parkingLocationId: String) {
+                runOnUiThread {
+                    showParkingSheet(parkingLocationId)
+                }
+            }
+
+            override fun onInitSuccess(
+                isSuccess: Boolean,
+                code: TJJupiterVMModel.InitErrorCode?
+            ) {
+                isSdkInitCompleted = isSuccess
+                if (isSuccess) {
+                    Toast.makeText(this@MainActivity, "SDK init 성공", Toast.LENGTH_SHORT).show()
+                } else {
+                    isSdkStarted = false
+                    Toast.makeText(this@MainActivity, "SDK init 실패: $code", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onJupiterResult(result: TJJupiterVMModel.JupiterResult) {
+            }
+
+            override fun onJupiterSuccess(
+                isSuccess: Boolean,
+                code: TJJupiterVMModel.JupiterErrorCode?
+            ) {
+                isSdkStarted = isSuccess
+                val message = if (isSuccess) "SDK start 성공" else "SDK start 실패: $code"
+                Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
+            }
+
+            override fun onWebViewSuccess(
+                isSuccess: Boolean,
+                code: TJJupiterVMModel.VMErrorCode?
+            ) {
+                if (!isSuccess) {
+                    Toast.makeText(this@MainActivity, "WebView 초기화 실패: $code", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
 
         parkingSelectionOverlay.setOnClickListener { hideParkingSheet() }
         parkingSelectionSheet.setOnClickListener { }
@@ -101,62 +148,11 @@ class MainActivity : AppCompatActivity() {
                 if (success) {
                     Toast.makeText(this, "Auth 성공, SDK init 진행", Toast.LENGTH_SHORT).show()
 
+                    vmnaviView.setDelegate(vmDelegate)
                     vmnaviView.initialize(
                         application,
                         userId,
-                        sectorId,
-                        object : TJJupiterVMView.TJJupiterVMViewDelegate {
-                            override fun didWebViewRemoved() {
-                                Toast.makeText(this@MainActivity, "web view is removed", Toast.LENGTH_SHORT).show()
-
-                            }
-
-                            override fun isEnteringWardDetected(wardInfo: TJJupiterVMModel.EnteringInfo) {
-
-                            }
-
-                            override fun isParkingLocationTapped(parkingLocationId: String) {
-                                runOnUiThread {
-                                    showParkingSheet(parkingLocationId)
-                                }
-                            }
-
-                            override fun onInitSuccess(
-                                isSuccess: Boolean,
-                                code: TJJupiterVMModel.InitErrorCode?
-                            ) {
-                                isSdkInitCompleted = isSuccess
-                                if (isSuccess) {
-                                    Toast.makeText(this@MainActivity, "SDK init 성공", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    isSdkStarted = false
-                                    Toast.makeText(this@MainActivity, "SDK init 실패: $code", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-
-                            override fun onJupiterResult(result: TJJupiterVMModel.JupiterResult) {
-
-                            }
-
-                            override fun onJupiterSuccess(
-                                isSuccess: Boolean,
-                                code: TJJupiterVMModel.JupiterErrorCode?
-                            ) {
-                                isSdkStarted = isSuccess
-                                val message = if (isSuccess) "SDK start 성공" else "SDK start 실패: $code"
-                                Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
-                            }
-
-                            override fun onWebViewSuccess(
-                                isSuccess: Boolean,
-                                code: TJJupiterVMModel.VMErrorCode?
-                            ) {
-                                if (!isSuccess) {
-                                    Toast.makeText(this@MainActivity, "WebView 초기화 실패: $code", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-
-                        }
+                        sectorId
                     )
                 } else {
                     isSdkInitCompleted = false

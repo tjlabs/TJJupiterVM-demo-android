@@ -2,14 +2,10 @@
 
 ## Overview
 
-TJJupiterVM-demo-android is a minimal Android sample app for integrating **TJLabs Jupiter VM SDK (AAR)**.
-
-<!-- JUPITER_SDK_VERSION_START -->
-Jupiter SDK version: 2.0.10
-<!-- JUPITER_SDK_VERSION_END -->
+TJJupiterVM-demo-android is a minimal Android sample app for integrating **TJLabs Jupiter VM SDK (JitPack)**.
 
 <!-- JUPITER_VM_SDK_VERSION_START -->
-Jupiter VM SDK (AAR): TJJupiterVM-sdk-android-1.0.0
+Jupiter VM SDK version: 1.0.0-start-sync-fix
 <!-- JUPITER_VM_SDK_VERSION_END -->
 
 The app demonstrates a simple VM service lifecycle with:
@@ -75,26 +71,13 @@ dependencyResolutionManagement {
 }
 ```
 
-### 2. Place VM AAR
-
-Copy AAR file into:
-
-```text
-<!-- VM_AAR_PATH_START -->
-app/libs/TJJupiterVM-sdk-android-1.0.0.aar
-<!-- VM_AAR_PATH_END -->
-```
-
-If file name changes, update `jupiterVmAarName` in `app/build.gradle.kts`.
-
-### 3. Add dependencies
+### 2. Add dependencies
 
 ```kotlin
 // app/build.gradle.kts
 <!-- APP_DEPENDENCIES_START -->
 dependencies {
-    implementation(files("libs/TJJupiterVM-sdk-android-1.0.0.aar"))
-    implementation("com.github.tjlabs:TJLabsJupiter-sdk-android:2.0.10")
+    implementation("com.github.tjlabs:TJJupiterVM-sdk-android:1.0.0-start-sync-fix")
 }
 <!-- APP_DEPENDENCIES_END -->
 ```
@@ -126,23 +109,25 @@ TJJupiterVMAuth.auth(application, accessKey, accessSecretKey) { code, success ->
 }
 ```
 
-### 3. Initialize service
+### 3. Set delegate + initialize service
 
 Input:
 - `application: Application`
 - `userId: String`
 - `sectorId: Int`
-- `delegate: TJJupiterVMView.TJJupiterVMViewDelegate`
 
 Output:
 - `onInitSuccess(isSuccess, code)`
 
 ```kotlin
+vmnaviView.setDelegate(delegate)
+```
+
+```kotlin
 vmnaviView.initialize(
     application,
     userId,
-    sectorId,
-    delegate
+    sectorId
 )
 ```
 

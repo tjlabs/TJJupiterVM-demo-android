@@ -34,7 +34,7 @@ val syncReadmeVersion by tasks.registering {
             ?.groupValues
             ?.getOrNull(1)
             ?: "unknown"
-        val jupiterVmAarName = Regex("""val\s+jupiterVmAarName\s*=\s*"([^"]+)"""")
+        val jupiterVmSdkVersion = Regex("""val\s+jupiterVmSdkVersion\s*=\s*"([^"]+)"""")
             .find(appGradleText)
             ?.groupValues
             ?.getOrNull(1)
@@ -51,21 +51,15 @@ val syncReadmeVersion by tasks.registering {
             content = withJupiterSdk,
             start = "<!-- JUPITER_VM_SDK_VERSION_START -->",
             end = "<!-- JUPITER_VM_SDK_VERSION_END -->",
-            body = "Jupiter VM SDK (AAR): $jupiterVmAarName"
-        )
-        val withAarPath = replaceBetweenMarkers(
-            content = withVmSdk,
-            start = "<!-- VM_AAR_PATH_START -->",
-            end = "<!-- VM_AAR_PATH_END -->",
-            body = "app/libs/$jupiterVmAarName.aar"
+            body = "Jupiter VM SDK version: $jupiterVmSdkVersion"
         )
         val updated = replaceBetweenMarkers(
-            content = withAarPath,
+            content = withVmSdk,
             start = "<!-- APP_DEPENDENCIES_START -->",
             end = "<!-- APP_DEPENDENCIES_END -->",
             body = """
 dependencies {
-    implementation(files("libs/$jupiterVmAarName.aar"))
+    implementation("com.github.tjlabs:TJJupiterVM-sdk-android:$jupiterVmSdkVersion")
     implementation("com.github.tjlabs:TJLabsJupiter-sdk-android:$jupiterSdkVersion")
 }
             """.trimIndent()
@@ -73,7 +67,7 @@ dependencies {
 
         if (original != updated) {
             readmeFile.writeText(updated)
-            println("README.md synced: jupiter=$jupiterSdkVersion, vm=$jupiterVmAarName")
+            println("README.md synced: jupiter=$jupiterSdkVersion, vm=$jupiterVmSdkVersion")
         }
     }
 }

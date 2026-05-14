@@ -24,7 +24,7 @@ val authSecretAccessKey = (
         ?: localProperties.getProperty("AUTH_SECRET_ACCESS_KEY", "")
     ).trim()
 
-val jupiterVmAarName = "TJJupiterVM-sdk-android-1.0.0"
+val jupiterVmSdkVersion = "1.0.0-start-sync-fix"
 val jupiterSdkVersion = "2.0.10"
 
 android {
@@ -65,8 +65,7 @@ android {
 }
 
 dependencies {
-    implementation(files("libs/$jupiterVmAarName.aar"))
-    implementation("com.github.tjlabs:TJLabsJupiter-sdk-android:$jupiterSdkVersion")
+    implementation("com.github.tjlabs:TJJupiterVM-sdk-android:$jupiterVmSdkVersion")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
