@@ -135,7 +135,7 @@ class MainActivity : AppCompatActivity() {
                             }
 
                             override fun onJupiterResult(result: TJJupiterVMModel.JupiterResult) {
-                                TODO("Not yet implemented")
+
                             }
 
                             override fun onJupiterSuccess(
