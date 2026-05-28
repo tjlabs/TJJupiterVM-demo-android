@@ -26,6 +26,7 @@ class MainActivity : AppCompatActivity() {
 
     private var isSdkInitCompleted = false
     private var isSdkStarted = false
+    private var isAuthCompleted = false
     private var pendingParkingSpaceId: String? = null
 
     private val updatedVacantParkingLocations = mapOf(
@@ -35,6 +36,7 @@ class MainActivity : AppCompatActivity() {
     )
 
     private lateinit var vmnaviView: TJJupiterVMView
+    private lateinit var vmDelegate: TJJupiterVMView.TJJupiterVMViewDelegate
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,7 +66,7 @@ class MainActivity : AppCompatActivity() {
             selectedParkingIdText.text = parkingId
             parkingSelectionOverlay.visibility = View.VISIBLE
         }
-        val vmDelegate = object : TJJupiterVMView.TJJupiterVMViewDelegate {
+        vmDelegate = object : TJJupiterVMView.TJJupiterVMViewDelegate {
             override fun didWebViewRemoved() {
                 Toast.makeText(this@MainActivity, "web view is removed", Toast.LENGTH_SHORT).show()
             }
@@ -107,6 +109,7 @@ class MainActivity : AppCompatActivity() {
                 isSuccess: Boolean,
                 code: TJJupiterVMModel.VMErrorCode?
             ) {
+                Log.d("CheckVMNavi", "onWebViewSuccess isSuccess=$isSuccess code=$code")
                 if (!isSuccess) {
                     Toast.makeText(this@MainActivity, "WebView 초기화 실패: $code", Toast.LENGTH_SHORT).show()
                 }
@@ -127,39 +130,12 @@ class MainActivity : AppCompatActivity() {
             hideParkingSheet()
         }
 
+        findViewById<Button>(R.id.buttonAuthSdk).setOnClickListener {
+            runAuth(accessKey, accessSecretKey)
+        }
+
         findViewById<Button>(R.id.buttonInitSdk).setOnClickListener {
-            if (!hasAllRequiredPermissions()) {
-                requestRequiredPermissionsIfNeeded()
-                Toast.makeText(this, "앱 권한을 먼저 허용해주세요", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            if (accessKey.isEmpty() || accessSecretKey.isEmpty()) {
-                Toast.makeText(
-                    this,
-                    "Set AUTH_ACCESS_KEY / AUTH_SECRET_ACCESS_KEY in local.properties",
-                    Toast.LENGTH_LONG
-                ).show()
-                return@setOnClickListener
-            }
-
-            TJJupiterVMAuth.auth(application, accessKey, accessSecretKey) { code, success ->
-                Log.d("TJJupiterVM-Demo", "auth code : $code // success : $success")
-                if (success) {
-                    Toast.makeText(this, "Auth 성공, SDK init 진행", Toast.LENGTH_SHORT).show()
-
-                    vmnaviView.setDelegate(vmDelegate)
-                    vmnaviView.initialize(
-                        application,
-                        userId,
-                        sectorId
-                    )
-                } else {
-                    isSdkInitCompleted = false
-                    isSdkStarted = false
-                    Toast.makeText(this, "Auth 실패 // code: $code", Toast.LENGTH_SHORT).show()
-                }
-            }
+            runInitialize(userId, sectorId)
         }
 
         findViewById<Button>(R.id.buttonStartSdk).setOnClickListener {
@@ -227,6 +203,50 @@ class MainActivity : AppCompatActivity() {
     private fun requestRequiredPermissionsIfNeeded() {
         if (hasAllRequiredPermissions()) return
         ActivityCompat.requestPermissions(this, runtimePermissions(), PERMISSION_REQUEST_CODE)
+    }
+
+    private fun runAuth(accessKey: String, accessSecretKey: String) {
+        if (!hasAllRequiredPermissions()) {
+            requestRequiredPermissionsIfNeeded()
+            Toast.makeText(this, "앱 권한을 먼저 허용해주세요", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (accessKey.isEmpty() || accessSecretKey.isEmpty()) {
+            Toast.makeText(
+                this,
+                "Set AUTH_ACCESS_KEY / AUTH_SECRET_ACCESS_KEY in local.properties",
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        TJJupiterVMAuth.auth(application, accessKey, accessSecretKey) { code, success ->
+            Log.d("TJJupiterVM-Demo", "auth code : $code // success : $success")
+            if (success) {
+                isAuthCompleted = true
+                Toast.makeText(this, "Auth 성공", Toast.LENGTH_SHORT).show()
+            } else {
+                isAuthCompleted = false
+                isSdkInitCompleted = false
+                isSdkStarted = false
+                Toast.makeText(this, "Auth 실패 // code: $code", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun runInitialize(userId: String, sectorId: Int) {
+        if (!isAuthCompleted) {
+            Toast.makeText(this, "SDK Auth를 먼저 진행해주세요", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        vmnaviView.setDelegate(vmDelegate)
+        vmnaviView.initialize(
+            application,
+            userId,
+            sectorId
+        )
     }
 
     override fun onRequestPermissionsResult(

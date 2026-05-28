@@ -5,7 +5,7 @@
 TJJupiterVM-demo-android is a minimal Android sample app for integrating **TJLabs Jupiter VM SDK (JitPack)**.
 
 <!-- JUPITER_VM_SDK_VERSION_START -->
-Jupiter VM SDK version: 1.0.0-start-sync-fix
+Jupiter VM SDK version: 1.0.0-webview-fix
 <!-- JUPITER_VM_SDK_VERSION_END -->
 
 The app demonstrates a simple VM service lifecycle with:
@@ -77,7 +77,8 @@ dependencyResolutionManagement {
 // app/build.gradle.kts
 <!-- APP_DEPENDENCIES_START -->
 dependencies {
-    implementation("com.github.tjlabs:TJJupiterVM-sdk-android:1.0.0-start-sync-fix")
+    implementation("com.github.tjlabs:TJJupiterVM-sdk-android:1.0.0-webview-fix")
+    implementation("com.github.tjlabs:TJLabsJupiter-sdk-android:2.0.10")
 }
 <!-- APP_DEPENDENCIES_END -->
 ```
@@ -176,3 +177,7 @@ val updatedVacantParkingLocations = mapOf(
     "OB-1h84se62jidlw3811" to TJJupiterVMModel.ParkingLocationState.VACANT
 )
 ```
+
+<!-- JUPITER_SDK_VERSION_START -->
+Jupiter SDK version: 2.0.10
+<!-- JUPITER_SDK_VERSION_END -->
