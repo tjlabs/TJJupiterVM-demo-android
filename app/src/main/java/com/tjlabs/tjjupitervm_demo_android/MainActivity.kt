@@ -6,17 +6,24 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SwitchCompat
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.tjlabs.tjjupitervm_sdk_android.TJJupiterVMAuth
 import com.tjlabs.tjjupitervm_sdk_android.TJJupiterVMModel
 import com.tjlabs.tjjupitervm_sdk_android.TJJupiterVMView
 import com.tjlabs.tjlabscommon_sdk_android.uvd.UserMode
+import com.tjlabs.tjlabsjupiter_sdk_android.InitErrorCode
+import com.tjlabs.tjlabsjupiter_sdk_android.JupiterErrorCode
+import com.tjlabs.tjlabsjupiter_sdk_android.JupiterMockMode
 
 class MainActivity : AppCompatActivity() {
     companion object {
@@ -28,12 +35,25 @@ class MainActivity : AppCompatActivity() {
     private var isSdkStarted = false
     private var isAuthCompleted = false
     private var pendingParkingSpaceId: String? = null
+    private var pendingParkingSpaceLevelId: Int? = null
+    private var selectedMockMode: JupiterMockMode = JupiterMockMode.VEHICLE_OUTDOOR_PARKING
+
+    private val initParkingLocationIds = listOf("OB-rhaj0t4ctwzb4491")
+    private val initialVacantParkingLocations = mapOf(
+        "OB-rhaj0t4ctwzb4491" to TJJupiterVMModel.ParkingLocationState.VACANT
+    )
+    private val initVacantParkingLocations = mapOf(
+        "OB-1h7zbmxfa10z93809" to TJJupiterVMModel.ParkingLocationState.VACANT,
+        "OB-1h84se62jidlw3811" to TJJupiterVMModel.ParkingLocationState.VACANT
+    )
+
 
     private val updatedVacantParkingLocations = mapOf(
         "OB-1h82101id68tx3548" to TJJupiterVMModel.ParkingLocationState.VACANT,
         "OB-1h7zbmxfa10z93809" to TJJupiterVMModel.ParkingLocationState.VACANT,
         "OB-1h84se62jidlw3811" to TJJupiterVMModel.ParkingLocationState.VACANT
     )
+
 
     private lateinit var vmnaviView: TJJupiterVMView
     private lateinit var vmDelegate: TJJupiterVMView.TJJupiterVMViewDelegate
@@ -54,6 +74,8 @@ class MainActivity : AppCompatActivity() {
         val selectedParkingIdText = findViewById<TextView>(R.id.textSelectedParkingId)
         val buttonParkingSheetClose = findViewById<Button>(R.id.buttonParkingSheetClose)
         val buttonParkingSheetConfirm = findViewById<Button>(R.id.buttonParkingSheetConfirm)
+        val switchSetMockMode = findViewById<SwitchCompat>(R.id.switchSetMock)
+        val spinnerMockMode = findViewById<Spinner>(R.id.spinnerMockMode)
 
         vmnaviView = TJJupiterVMView(this)
 
@@ -61,11 +83,14 @@ class MainActivity : AppCompatActivity() {
             pendingParkingSpaceId = null
             parkingSelectionOverlay.visibility = View.GONE
         }
-        val showParkingSheet: (String) -> Unit = { parkingId ->
+
+        val showParkingSheet: (Int, String) -> Unit = { levelId, parkingId ->
+            pendingParkingSpaceLevelId = levelId
             pendingParkingSpaceId = parkingId
             selectedParkingIdText.text = parkingId
             parkingSelectionOverlay.visibility = View.VISIBLE
         }
+
         vmDelegate = object : TJJupiterVMView.TJJupiterVMViewDelegate {
             override fun didWebViewRemoved() {
                 Toast.makeText(this@MainActivity, "web view is removed", Toast.LENGTH_SHORT).show()
@@ -74,19 +99,30 @@ class MainActivity : AppCompatActivity() {
             override fun isEnteringWardDetected(wardInfo: TJJupiterVMModel.EnteringInfo) {
             }
 
-            override fun isParkingLocationTapped(parkingLocationId: String) {
+            override fun isParkingLocationTapped(
+                levelId: Int,
+                parkingLocationId: String
+            ) {
+                Log.d("CheckVMNavi", "[AllProcess] isParkingLocationTapped id=$parkingLocationId // level ID : $levelId")
                 runOnUiThread {
-                    showParkingSheet(parkingLocationId)
+                    showParkingSheet(levelId, parkingLocationId)
                 }
             }
 
-            override fun onInitSuccess(
-                isSuccess: Boolean,
-                code: TJJupiterVMModel.InitErrorCode?
-            ) {
+            override fun onInitSuccess(isSuccess: Boolean, code: InitErrorCode?) {
                 isSdkInitCompleted = isSuccess
                 if (isSuccess) {
                     Toast.makeText(this@MainActivity, "SDK init 성공", Toast.LENGTH_SHORT).show()
+
+
+                    vmnaviView.setVacantParkingLocationStates(
+                        mapOf(PARKING_LEVEL_ID to initVacantParkingLocations)
+                    )
+
+                    vmnaviView.setSavedParkingLocations(
+                        mapOf(PARKING_LEVEL_ID to initParkingLocationIds)
+                    )
+
                 } else {
                     isSdkStarted = false
                     Toast.makeText(this@MainActivity, "SDK init 실패: $code", Toast.LENGTH_SHORT).show()
@@ -96,10 +132,7 @@ class MainActivity : AppCompatActivity() {
             override fun onJupiterResult(result: TJJupiterVMModel.JupiterResult) {
             }
 
-            override fun onJupiterSuccess(
-                isSuccess: Boolean,
-                code: TJJupiterVMModel.JupiterErrorCode?
-            ) {
+            override fun onJupiterSuccess(isSuccess: Boolean, code: JupiterErrorCode?) {
                 isSdkStarted = isSuccess
                 val message = if (isSuccess) "SDK start 성공" else "SDK start 실패: $code"
                 Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
@@ -125,7 +158,9 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "선택된 주차면 ID가 없습니다", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            vmnaviView.setSavedParkingLocations(listOf(parkingId))
+
+            vmnaviView.updateSavedParkingLocations(mapOf(PARKING_LEVEL_ID to listOf(parkingId)))
+
             Toast.makeText(this, "주차 위치 저장 요청: $parkingId", Toast.LENGTH_SHORT).show()
             hideParkingSheet()
         }
@@ -143,6 +178,12 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "SDK init을 먼저 진행해주세요", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
+
+
+            if (switchSetMockMode.isChecked) {
+                vmnaviView.setMockMode(selectedMockMode)
+            }
+
             vmnaviView.startService(UserMode.MODE_VEHICLE)
         }
 
@@ -171,9 +212,43 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "SDK init을 먼저 진행해주세요", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            vmnaviView.updateVacantParkingLocations(PARKING_LEVEL_ID, updatedVacantParkingLocations)
+
+            vmnaviView.updateVacantParkingLocationStates(mapOf(PARKING_LEVEL_ID to updatedVacantParkingLocations))
             Toast.makeText(this, "빈 주차면 3개 업데이트 전송", Toast.LENGTH_SHORT).show()
         }
+
+        switchSetMockMode.setOnCheckedChangeListener { _, isChecked ->
+                Toast.makeText(this, "Mock Mode ON", Toast.LENGTH_SHORT).show()
+        }
+
+        val modes = JupiterMockMode.entries
+        val labels = modes.map { mode ->
+            mode.name.lowercase().replace("_", " ")
+        }
+        val adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_item,
+            labels
+        ).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+
+        spinnerMockMode.adapter = adapter
+        spinnerMockMode.setSelection(0)
+        spinnerMockMode.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: AdapterView<*>,
+                view: View?,
+                position: Int,
+                id: Long
+            ) {
+                selectedMockMode = modes.getOrElse(position) { JupiterMockMode.VEHICLE_OUTDOOR_PARKING }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) = Unit
+        }
+
+
     }
 
     override fun onDestroy() {

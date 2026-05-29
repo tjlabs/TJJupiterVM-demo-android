@@ -24,8 +24,7 @@ val authSecretAccessKey = (
         ?: localProperties.getProperty("AUTH_SECRET_ACCESS_KEY", "")
     ).trim()
 
-val jupiterVmSdkVersion = "1.0.0-webview-fix"
-val jupiterSdkVersion = "2.0.10"
+val jupiterVmSdkVersion = "1.0.3"
 
 android {
     namespace = "com.tjlabs.tjjupitervm_demo_android"

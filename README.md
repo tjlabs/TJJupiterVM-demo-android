@@ -5,7 +5,7 @@
 TJJupiterVM-demo-android is a minimal Android sample app for integrating **TJLabs Jupiter VM SDK (JitPack)**.
 
 <!-- JUPITER_VM_SDK_VERSION_START -->
-Jupiter VM SDK version: 1.0.0-webview-fix
+Jupiter VM SDK version: 1.0.3
 <!-- JUPITER_VM_SDK_VERSION_END -->
 
 The app demonstrates a simple VM service lifecycle with:
@@ -14,7 +14,8 @@ The app demonstrates a simple VM service lifecycle with:
 - Service start (`SDK Start`)
 - View attach/detach (`뷰 보기` / `뷰 종료`)
 - Service stop (`SDK 종료`)
-- Parking location APIs (`setSavedParkingLocations`, `setVacantParkingLocations`)
+- Parking location APIs (`setSavedParkingLocations`, `updateSavedParkingLocations`, `setVacantParkingLocationStates`, `updateVacantParkingLocationStates`)
+- Optional mock mode before service start (`setMockMode`)
 
 ## Features
 
@@ -77,8 +78,12 @@ dependencyResolutionManagement {
 // app/build.gradle.kts
 <!-- APP_DEPENDENCIES_START -->
 dependencies {
-    implementation("com.github.tjlabs:TJJupiterVM-sdk-android:1.0.0-webview-fix")
-    implementation("com.github.tjlabs:TJLabsJupiter-sdk-android:2.0.10")
+    implementation("com.github.tjlabs:TJJupiterVM-sdk-android:$jupiterVmSdkVersion")
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.material)
+    implementation(libs.androidx.activity)
+    implementation(libs.androidx.constraintlayout)
 }
 <!-- APP_DEPENDENCIES_END -->
 ```
@@ -145,6 +150,12 @@ Output:
 vmnaviView.startService(UserMode.MODE_VEHICLE)
 ```
 
+Optional mock mode before `startService`:
+
+```kotlin
+vmnaviView.setMockMode(selectedMockMode)
+```
+
 ### 5. Show / close VM view
 
 ```kotlin
@@ -161,10 +172,23 @@ vmnaviView.closeFrame()
 
 ### 7. Parking APIs in this demo
 
-Saved parking example:
+Initialize parking states after init success:
 
 ```kotlin
-vmnaviView.setSavedParkingLocations(listOf("OB-..."))
+vmnaviView.setVacantParkingLocationStates(
+    mapOf(PARKING_LEVEL_ID to initVacantParkingLocations)
+)
+vmnaviView.setSavedParkingLocations(
+    mapOf(PARKING_LEVEL_ID to initParkingLocationIds)
+)
+```
+
+Save selected parking location:
+
+```kotlin
+vmnaviView.updateSavedParkingLocations(
+    mapOf(PARKING_LEVEL_ID to listOf(parkingId))
+)
 ```
 
 Vacant parking update example (hardcoded button):
@@ -176,8 +200,13 @@ val updatedVacantParkingLocations = mapOf(
     "OB-1h7zbmxfa10z93809" to TJJupiterVMModel.ParkingLocationState.VACANT,
     "OB-1h84se62jidlw3811" to TJJupiterVMModel.ParkingLocationState.VACANT
 )
+vmnaviView.updateVacantParkingLocationStates(
+    mapOf(parkingLevelId to updatedVacantParkingLocations)
+)
 ```
 
-<!-- JUPITER_SDK_VERSION_START -->
-Jupiter SDK version: 2.0.10
-<!-- JUPITER_SDK_VERSION_END -->
+Tap callback signature in current SDK:
+
+```kotlin
+override fun isParkingLocationTapped(levelId: Int, parkingLocationId: String)
+```
