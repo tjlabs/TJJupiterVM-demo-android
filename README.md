@@ -225,7 +225,7 @@ vmnaviView.setDelegate(object : TJJupiterVMView.TJJupiterVMViewDelegate {
         code: JupiterErrorCode?
     ) {}
 
-    override fun onJupiterResult(result: TJJupiterVMModel.JupiterResult) {}
+    override fun onJupiterResult(result:JupiterResult) {}
 
     override fun onWebViewSuccess(
         isSuccess: Boolean,
