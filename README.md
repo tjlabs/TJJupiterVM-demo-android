@@ -5,7 +5,7 @@
 TJJupiterVM-demo-android is a minimal Android sample app for integrating **TJLabs Jupiter VM SDK (JitPack)**.
 
 <!-- JUPITER_VM_SDK_VERSION_START -->
-Jupiter VM SDK version: 1.0.3
+Jupiter VM SDK version: 1.0.4
 <!-- JUPITER_VM_SDK_VERSION_END -->
 
 The app demonstrates a simple VM service lifecycle with:
@@ -210,3 +210,147 @@ Tap callback signature in current SDK:
 ```kotlin
 override fun isParkingLocationTapped(levelId: Int, parkingLocationId: String)
 ```
+
+## Delegate
+
+```kotlin
+vmnaviView.setDelegate(object : TJJupiterVMView.TJJupiterVMViewDelegate {
+    override fun onInitSuccess(
+        isSuccess: Boolean,
+        code: InitErrorCode?
+    ) {}
+
+    override fun onJupiterSuccess(
+        isSuccess: Boolean,
+        code: JupiterErrorCode?
+    ) {}
+
+    override fun onJupiterResult(result: TJJupiterVMModel.JupiterResult) {}
+
+    override fun onWebViewSuccess(
+        isSuccess: Boolean,
+        code: TJJupiterVMModel.VMErrorCode?
+    ) {}
+
+    override fun didWebViewRemoved() {}
+
+    override fun isEnteringWardDetected(wardInfo: TJJupiterVMModel.EnteringInfo) {}
+
+    override fun isParkingLocationTapped(levelId: Int, parkingLocationId: String) {}
+})
+```
+
+Current callback signatures in SDK:
+
+```kotlin
+interface TJJupiterVMViewDelegate {
+    fun onInitSuccess(isSuccess: Boolean, code: JupiterInitErrorCode? = null)
+    fun onJupiterSuccess(isSuccess: Boolean, code: JupiterSdkErrorCode? = null)
+    fun onJupiterResult(result: TJJupiterVMModel.JupiterResult)
+    fun onWebViewSuccess(isSuccess: Boolean, code: TJJupiterVMModel.VMErrorCode? = null)
+    fun didWebViewRemoved()
+    fun isEnteringWardDetected(wardInfo: TJJupiterVMModel.EnteringInfo)
+    fun isParkingLocationTapped(levelId: Int, parkingLocationId: String)
+}
+```
+
+## Position Result
+
+### JupiterResult
+
+```kotlin
+data class JupiterResult(
+    val mobile_time: Long,
+    val index: Int,
+    val building_name: String,
+    val level_name: String,
+    val jupiter_pos: PositionRequest,
+    val navi_pos: PositionRequest?,
+    val llh: LLH?,
+    val velocity: Float,
+    val is_vehicle: Boolean,
+    val is_indoor: Boolean,
+    val validity_flag: Int,
+    val remain_distance : Int? = null
+)
+```
+
+### Position
+
+```kotlin
+data class Position(
+    val x: Int,
+    val y: Int,
+    val heading: Int
+)
+```
+
+### LLH
+
+```kotlin
+data class LLH(
+    val lat: Double,
+    val lon: Double,
+    val azimuth: Double
+)
+```
+
+### EnteringInfo
+
+```kotlin
+data class EnteringInfo(
+    val id: Int,
+    val number: Int,
+    val name: String
+)
+```
+
+## Core Enums
+
+### InitErrorCode
+
+| Name | Value | Description |
+| --- | --- | --- |
+| `NOT_AUTHORIZED` | `0` | Not authorized |
+| `INVALID_ID` | `1` | Invalid ID (blank or includes unsupported characters) |
+| `NETWORK_DISCONNECT` | `2` | Network disconnected |
+| `LOGIN_FAIL` | `3` | Login/authentication failed |
+| `LOAD_RESOURCE_FAIL` | `4` | Resource loading / calc init failed |
+
+### JupiterErrorCode
+
+| Name | Value | Description |
+| --- | --- | --- |
+| `NOT_INITIALIZED` | `0` | Service is not initialized |
+| `DUPLICATED_SERVICE` | `1` | Service already running |
+| `GENERATOR_FAIL` | `2` | Generator failed |
+| `INVALID_ID` | `3` | Invalid ID |
+| `INVALID_MODE` | `4` | Invalid mode |
+| `NETWORK_DISCONNECT` | `5` | Network disconnected |
+| `LOGIN_FAIL` | `6` | Login/authentication failed |
+| `CALC_INIT_FAIL` | `7` | Calc manager initialization failed |
+| `BLUETOOTH_OFF` | `8` | Bluetooth is off |
+| `BLUETOOTH_UNAVAILABLE` | `9` | Bluetooth unavailable on device |
+| `BLE_SCAN_STOP` | `10` | BLE scan stopped |
+| `PERMISSION_DENIED` | `11` | Required permission denied |
+| `SIMULATION_DATA_LOAD_FAIL` | `12` | Simulation data load failed |
+| `GENERATOR_PRECHECK_FAIL` | `13` | Generator precheck failed |
+
+### VMErrorCode (`TJJupiterVMModel.VMErrorCode`)
+
+| Name | Value | Description |
+| --- | --- | --- |
+| `UNKNOWN` | `-1` | Unknown error |
+| `VM_VIEW_FAIL` | `0` | WebView/VM view initialization failed |
+
+### ParkingLocationState (`TJJupiterVMModel.ParkingLocationState`)
+
+| Name | Value | Description |
+| --- | --- | --- |
+| `VACANT` | `0` | Vacant parking space |
+| `OCCUPIED` | `1` | Occupied parking space |
+
+
+## License
+
+TJJupiterVM SDK is proprietary software provided by TJLabs under a separate commercial license agreement.

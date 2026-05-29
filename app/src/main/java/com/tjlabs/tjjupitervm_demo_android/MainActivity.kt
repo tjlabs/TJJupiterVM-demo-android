@@ -24,6 +24,7 @@ import com.tjlabs.tjlabscommon_sdk_android.uvd.UserMode
 import com.tjlabs.tjlabsjupiter_sdk_android.InitErrorCode
 import com.tjlabs.tjlabsjupiter_sdk_android.JupiterErrorCode
 import com.tjlabs.tjlabsjupiter_sdk_android.JupiterMockMode
+import com.tjlabs.tjlabsjupiter_sdk_android.api.JupiterResult
 
 class MainActivity : AppCompatActivity() {
     companion object {
@@ -129,7 +130,9 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
-            override fun onJupiterResult(result: TJJupiterVMModel.JupiterResult) {
+            override fun onJupiterResult(result: JupiterResult) {
+                Log.d("CheckVMNavi", "onJupiterResult result : $result")
+
             }
 
             override fun onJupiterSuccess(isSuccess: Boolean, code: JupiterErrorCode?) {
