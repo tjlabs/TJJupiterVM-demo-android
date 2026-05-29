@@ -246,7 +246,7 @@ Current callback signatures in SDK:
 interface TJJupiterVMViewDelegate {
     fun onInitSuccess(isSuccess: Boolean, code: JupiterInitErrorCode? = null)
     fun onJupiterSuccess(isSuccess: Boolean, code: JupiterSdkErrorCode? = null)
-    fun onJupiterResult(result: TJJupiterVMModel.JupiterResult)
+    fun onJupiterResult(result: JupiterResult)
     fun onWebViewSuccess(isSuccess: Boolean, code: TJJupiterVMModel.VMErrorCode? = null)
     fun didWebViewRemoved()
     fun isEnteringWardDetected(wardInfo: TJJupiterVMModel.EnteringInfo)
