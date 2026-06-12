@@ -35,6 +35,7 @@ class MainActivity : AppCompatActivity() {
     private var isSdkInitCompleted = false
     private var isSdkStarted = false
     private var isAuthCompleted = false
+    private var pendingStartAll = false
     private var pendingParkingSpaceId: String? = null
     private var pendingParkingSpaceLevelId: Int? = null
     private var selectedMockMode: JupiterMockMode = JupiterMockMode.VEHICLE_OUTDOOR_PARKING
@@ -114,8 +115,6 @@ class MainActivity : AppCompatActivity() {
                 isSdkInitCompleted = isSuccess
                 if (isSuccess) {
                     Toast.makeText(this@MainActivity, "SDK init 성공", Toast.LENGTH_SHORT).show()
-
-
                     vmnaviView.setVacantParkingLocationStates(
                         mapOf(PARKING_LEVEL_ID to initVacantParkingLocations)
                     )
@@ -123,6 +122,9 @@ class MainActivity : AppCompatActivity() {
                     vmnaviView.setSavedParkingLocations(
                         mapOf(PARKING_LEVEL_ID to initParkingLocationIds)
                     )
+                    if (pendingStartAll) {
+                        runStartAndShow(vmnaviContainer, switchSetMockMode.isChecked)
+                    }
 
                 } else {
                     isSdkStarted = false
@@ -170,6 +172,10 @@ class MainActivity : AppCompatActivity() {
 
         findViewById<Button>(R.id.buttonAuthSdk).setOnClickListener {
             runAuth(accessKey, accessSecretKey)
+        }
+
+        findViewById<Button>(R.id.buttonStartAll).setOnClickListener {
+            runStartAll(accessKey, accessSecretKey, userId, sectorId, vmnaviContainer, switchSetMockMode.isChecked)
         }
 
         findViewById<Button>(R.id.buttonInitSdk).setOnClickListener {
@@ -283,7 +289,11 @@ class MainActivity : AppCompatActivity() {
         ActivityCompat.requestPermissions(this, runtimePermissions(), PERMISSION_REQUEST_CODE)
     }
 
-    private fun runAuth(accessKey: String, accessSecretKey: String) {
+    private fun runAuth(
+        accessKey: String,
+        accessSecretKey: String,
+        onSuccess: (() -> Unit)? = null
+    ) {
         if (!hasAllRequiredPermissions()) {
             requestRequiredPermissionsIfNeeded()
             Toast.makeText(this, "앱 권한을 먼저 허용해주세요", Toast.LENGTH_SHORT).show()
@@ -304,7 +314,9 @@ class MainActivity : AppCompatActivity() {
             if (success) {
                 isAuthCompleted = true
                 Toast.makeText(this, "Auth 성공", Toast.LENGTH_SHORT).show()
+                onSuccess?.invoke()
             } else {
+                pendingStartAll = false
                 isAuthCompleted = false
                 isSdkInitCompleted = false
                 isSdkStarted = false
@@ -325,6 +337,46 @@ class MainActivity : AppCompatActivity() {
             userId,
             sectorId
         )
+    }
+
+    private fun runStartAll(
+        accessKey: String,
+        accessSecretKey: String,
+        userId: String,
+        sectorId: Int,
+        vmnaviContainer: FrameLayout,
+        applyMockMode: Boolean
+    ) {
+        pendingStartAll = true
+
+        if (!hasAllRequiredPermissions()) {
+            requestRequiredPermissionsIfNeeded()
+            Toast.makeText(this, "앱 권한을 먼저 허용해주세요", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (!isAuthCompleted) {
+            runAuth(accessKey, accessSecretKey) {
+                runInitialize(userId, sectorId)
+            }
+            return
+        }
+
+        if (!isSdkInitCompleted) {
+            runInitialize(userId, sectorId)
+            return
+        }
+
+        runStartAndShow(vmnaviContainer, applyMockMode)
+    }
+
+    private fun runStartAndShow(vmnaviContainer: FrameLayout, applyMockMode: Boolean) {
+        if (applyMockMode) {
+            vmnaviView.setMockMode(selectedMockMode)
+        }
+        vmnaviView.startService(UserMode.MODE_VEHICLE)
+        vmnaviView.configureFrame(vmnaviContainer)
+        pendingStartAll = false
     }
 
     override fun onRequestPermissionsResult(
