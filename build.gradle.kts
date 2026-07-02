@@ -1,3 +1,5 @@
+import java.util.regex.Matcher
+
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
     alias(libs.plugins.android.application) apply false
@@ -22,58 +24,48 @@ val syncReadmeVersion by tasks.registering {
             }
             val pattern = Regex("$start[\\s\\S]*?$end")
             return if (pattern.containsMatchIn(content)) {
-                content.replace(pattern, replacement)
+                content.replace(pattern, Matcher.quoteReplacement(replacement))
             } else {
                 "$content\n\n$replacement\n"
             }
         }
 
         val appGradleText = appGradleFile.readText()
-        val jupiterSdkVersion = Regex("""val\s+jupiterSdkVersion\s*=\s*"([^"]+)"""")
+        val jupiterVmSdkVersion = Regex("""val\s+jupiterVmSdkVersion\s*=\s*"([^"]+)"""")
             .find(appGradleText)
             ?.groupValues
             ?.getOrNull(1)
             ?: "unknown"
-        val jupiterVmAarName = Regex("""val\s+jupiterVmAarName\s*=\s*"([^"]+)"""")
-            .find(appGradleText)
-            ?.groupValues
-            ?.getOrNull(1)
-            ?: "unknown"
+        val implementationLines = appGradleText
+            .lineSequence()
+            .map { it.trim() }
+            .filter { it.startsWith("implementation(") }
+            .toList()
+        val dependenciesBlockBody = buildString {
+            appendLine("dependencies {")
+            implementationLines.forEach { line ->
+                appendLine("    $line")
+            }
+            append("}")
+        }
 
         val original = readmeFile.readText()
-        val withJupiterSdk = replaceBetweenMarkers(
-            content = original,
-            start = "<!-- JUPITER_SDK_VERSION_START -->",
-            end = "<!-- JUPITER_SDK_VERSION_END -->",
-            body = "Jupiter SDK version: $jupiterSdkVersion"
-        )
         val withVmSdk = replaceBetweenMarkers(
-            content = withJupiterSdk,
+            content = original,
             start = "<!-- JUPITER_VM_SDK_VERSION_START -->",
             end = "<!-- JUPITER_VM_SDK_VERSION_END -->",
-            body = "Jupiter VM SDK (AAR): $jupiterVmAarName"
-        )
-        val withAarPath = replaceBetweenMarkers(
-            content = withVmSdk,
-            start = "<!-- VM_AAR_PATH_START -->",
-            end = "<!-- VM_AAR_PATH_END -->",
-            body = "app/libs/$jupiterVmAarName.aar"
+            body = "Jupiter VM SDK version: $jupiterVmSdkVersion"
         )
         val updated = replaceBetweenMarkers(
-            content = withAarPath,
+            content = withVmSdk,
             start = "<!-- APP_DEPENDENCIES_START -->",
             end = "<!-- APP_DEPENDENCIES_END -->",
-            body = """
-dependencies {
-    implementation(files("libs/$jupiterVmAarName.aar"))
-    implementation("com.github.tjlabs:TJLabsJupiter-sdk-android:$jupiterSdkVersion")
-}
-            """.trimIndent()
+            body = dependenciesBlockBody
         )
 
         if (original != updated) {
             readmeFile.writeText(updated)
-            println("README.md synced: jupiter=$jupiterSdkVersion, vm=$jupiterVmAarName")
+            println("README.md synced from app/build.gradle.kts dependencies, vm=$jupiterVmSdkVersion")
         }
     }
 }

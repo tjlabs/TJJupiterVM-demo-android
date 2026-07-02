@@ -6,18 +6,25 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SwitchCompat
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.tjlabs.tjjupitervm_sdk_android.TJJupiterVMAuth
 import com.tjlabs.tjjupitervm_sdk_android.TJJupiterVMModel
 import com.tjlabs.tjjupitervm_sdk_android.TJJupiterVMView
 import com.tjlabs.tjlabscommon_sdk_android.uvd.UserMode
-import com.tjlabs.tjlabsjupiter_sdk_android.api.JupiterRegion
+import com.tjlabs.tjlabsjupiter_sdk_android.InitErrorCode
+import com.tjlabs.tjlabsjupiter_sdk_android.JupiterErrorCode
+import com.tjlabs.tjlabsjupiter_sdk_android.JupiterMockMode
+import com.tjlabs.tjlabsjupiter_sdk_android.api.JupiterResult
 
 class MainActivity : AppCompatActivity() {
     companion object {
@@ -27,7 +34,21 @@ class MainActivity : AppCompatActivity() {
 
     private var isSdkInitCompleted = false
     private var isSdkStarted = false
+    private var isAuthCompleted = false
+    private var pendingStartAll = false
     private var pendingParkingSpaceId: String? = null
+    private var pendingParkingSpaceLevelId: Int? = null
+    private var selectedMockMode: JupiterMockMode = JupiterMockMode.VEHICLE_OUTDOOR_PARKING
+
+    private val initParkingLocationIds = listOf("OB-rhaj0t4ctwzb4491")
+    private val initialVacantParkingLocations = mapOf(
+        "OB-rhaj0t4ctwzb4491" to TJJupiterVMModel.ParkingLocationState.VACANT
+    )
+    private val initVacantParkingLocations = mapOf(
+        "OB-1h7zbmxfa10z93809" to TJJupiterVMModel.ParkingLocationState.VACANT,
+        "OB-1h84se62jidlw3811" to TJJupiterVMModel.ParkingLocationState.VACANT
+    )
+
 
     private val updatedVacantParkingLocations = mapOf(
         "OB-1h82101id68tx3548" to TJJupiterVMModel.ParkingLocationState.VACANT,
@@ -35,7 +56,9 @@ class MainActivity : AppCompatActivity() {
         "OB-1h84se62jidlw3811" to TJJupiterVMModel.ParkingLocationState.VACANT
     )
 
+
     private lateinit var vmnaviView: TJJupiterVMView
+    private lateinit var vmDelegate: TJJupiterVMView.TJJupiterVMViewDelegate
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -53,6 +76,8 @@ class MainActivity : AppCompatActivity() {
         val selectedParkingIdText = findViewById<TextView>(R.id.textSelectedParkingId)
         val buttonParkingSheetClose = findViewById<Button>(R.id.buttonParkingSheetClose)
         val buttonParkingSheetConfirm = findViewById<Button>(R.id.buttonParkingSheetConfirm)
+        val switchSetMockMode = findViewById<SwitchCompat>(R.id.switchSetMock)
+        val spinnerMockMode = findViewById<Spinner>(R.id.spinnerMockMode)
 
         vmnaviView = TJJupiterVMView(this)
 
@@ -60,10 +85,73 @@ class MainActivity : AppCompatActivity() {
             pendingParkingSpaceId = null
             parkingSelectionOverlay.visibility = View.GONE
         }
-        val showParkingSheet: (String) -> Unit = { parkingId ->
+
+        val showParkingSheet: (Int, String) -> Unit = { levelId, parkingId ->
+            pendingParkingSpaceLevelId = levelId
             pendingParkingSpaceId = parkingId
             selectedParkingIdText.text = parkingId
             parkingSelectionOverlay.visibility = View.VISIBLE
+        }
+
+        vmDelegate = object : TJJupiterVMView.TJJupiterVMViewDelegate {
+            override fun didWebViewRemoved() {
+                Toast.makeText(this@MainActivity, "web view is removed", Toast.LENGTH_SHORT).show()
+            }
+
+            override fun isEnteringWardDetected(wardInfo: TJJupiterVMModel.EnteringInfo) {
+            }
+
+            override fun isParkingLocationTapped(
+                levelId: Int,
+                parkingLocationId: String
+            ) {
+                Log.d("CheckVMNavi", "[AllProcess] isParkingLocationTapped id=$parkingLocationId // level ID : $levelId")
+                runOnUiThread {
+                    showParkingSheet(levelId, parkingLocationId)
+                }
+            }
+
+            override fun onInitSuccess(isSuccess: Boolean, code: InitErrorCode?) {
+                isSdkInitCompleted = isSuccess
+                if (isSuccess) {
+                    Toast.makeText(this@MainActivity, "SDK init 성공", Toast.LENGTH_SHORT).show()
+                    vmnaviView.setVacantParkingLocationStates(
+                        mapOf(PARKING_LEVEL_ID to initVacantParkingLocations)
+                    )
+
+                    vmnaviView.setSavedParkingLocations(
+                        mapOf(PARKING_LEVEL_ID to initParkingLocationIds)
+                    )
+                    if (pendingStartAll) {
+                        runStartAndShow(vmnaviContainer, switchSetMockMode.isChecked)
+                    }
+
+                } else {
+                    isSdkStarted = false
+                    Toast.makeText(this@MainActivity, "SDK init 실패: $code", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            override fun onJupiterResult(result: JupiterResult) {
+                Log.d("CheckVMNavi", "onJupiterResult result : $result")
+
+            }
+
+            override fun onJupiterSuccess(isSuccess: Boolean, code: JupiterErrorCode?) {
+                isSdkStarted = isSuccess
+                val message = if (isSuccess) "SDK start 성공" else "SDK start 실패: $code"
+                Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
+            }
+
+            override fun onWebViewSuccess(
+                isSuccess: Boolean,
+                code: TJJupiterVMModel.VMErrorCode?
+            ) {
+                Log.d("CheckVMNavi", "onWebViewSuccess isSuccess=$isSuccess code=$code")
+                if (!isSuccess) {
+                    Toast.makeText(this@MainActivity, "WebView 초기화 실패: $code", Toast.LENGTH_SHORT).show()
+                }
+            }
         }
 
         parkingSelectionOverlay.setOnClickListener { hideParkingSheet() }
@@ -75,95 +163,23 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "선택된 주차면 ID가 없습니다", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            vmnaviView.setSavedParkingLocations(listOf(parkingId))
+
+            vmnaviView.updateSavedParkingLocations(mapOf(PARKING_LEVEL_ID to listOf(parkingId)))
+
             Toast.makeText(this, "주차 위치 저장 요청: $parkingId", Toast.LENGTH_SHORT).show()
             hideParkingSheet()
         }
 
+        findViewById<Button>(R.id.buttonAuthSdk).setOnClickListener {
+            runAuth(accessKey, accessSecretKey)
+        }
+
+        findViewById<Button>(R.id.buttonStartAll).setOnClickListener {
+            runStartAll(accessKey, accessSecretKey, userId, sectorId, vmnaviContainer, switchSetMockMode.isChecked)
+        }
+
         findViewById<Button>(R.id.buttonInitSdk).setOnClickListener {
-            if (!hasAllRequiredPermissions()) {
-                requestRequiredPermissionsIfNeeded()
-                Toast.makeText(this, "앱 권한을 먼저 허용해주세요", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            if (accessKey.isEmpty() || accessSecretKey.isEmpty()) {
-                Toast.makeText(
-                    this,
-                    "Set AUTH_ACCESS_KEY / AUTH_SECRET_ACCESS_KEY in local.properties",
-                    Toast.LENGTH_LONG
-                ).show()
-                return@setOnClickListener
-            }
-
-            TJJupiterVMAuth.auth(application, accessKey, accessSecretKey) { code, success ->
-                Log.d("TJJupiterVM-Demo", "auth code : $code // success : $success")
-                if (success) {
-                    Toast.makeText(this, "Auth 성공, SDK init 진행", Toast.LENGTH_SHORT).show()
-
-                    vmnaviView.initialize(
-                        application,
-                        userId,
-                        sectorId,
-                        object : TJJupiterVMView.TJJupiterVMViewDelegate {
-                            override fun didWebViewRemoved() {
-                                Toast.makeText(this@MainActivity, "web view is removed", Toast.LENGTH_SHORT).show()
-
-                            }
-
-                            override fun isEnteringWardDetected(wardInfo: TJJupiterVMModel.EnteringInfo) {
-
-                            }
-
-                            override fun isParkingLocationTapped(parkingLocationId: String) {
-                                runOnUiThread {
-                                    showParkingSheet(parkingLocationId)
-                                }
-                            }
-
-                            override fun onInitSuccess(
-                                isSuccess: Boolean,
-                                code: TJJupiterVMModel.InitErrorCode?
-                            ) {
-                                isSdkInitCompleted = isSuccess
-                                if (isSuccess) {
-                                    Toast.makeText(this@MainActivity, "SDK init 성공", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    isSdkStarted = false
-                                    Toast.makeText(this@MainActivity, "SDK init 실패: $code", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-
-                            override fun onJupiterResult(result: TJJupiterVMModel.JupiterResult) {
-                                TODO("Not yet implemented")
-                            }
-
-                            override fun onJupiterSuccess(
-                                isSuccess: Boolean,
-                                code: TJJupiterVMModel.JupiterErrorCode?
-                            ) {
-                                isSdkStarted = isSuccess
-                                val message = if (isSuccess) "SDK start 성공" else "SDK start 실패: $code"
-                                Toast.makeText(this@MainActivity, message, Toast.LENGTH_SHORT).show()
-                            }
-
-                            override fun onWebViewSuccess(
-                                isSuccess: Boolean,
-                                code: TJJupiterVMModel.VMErrorCode?
-                            ) {
-                                if (!isSuccess) {
-                                    Toast.makeText(this@MainActivity, "WebView 초기화 실패: $code", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-
-                        }
-                    )
-                } else {
-                    isSdkInitCompleted = false
-                    isSdkStarted = false
-                    Toast.makeText(this, "Auth 실패 // code: $code", Toast.LENGTH_SHORT).show()
-                }
-            }
+            runInitialize(userId, sectorId)
         }
 
         findViewById<Button>(R.id.buttonStartSdk).setOnClickListener {
@@ -171,6 +187,12 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "SDK init을 먼저 진행해주세요", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
+
+
+            if (switchSetMockMode.isChecked) {
+                vmnaviView.setMockMode(selectedMockMode)
+            }
+
             vmnaviView.startService(UserMode.MODE_VEHICLE)
         }
 
@@ -199,9 +221,43 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "SDK init을 먼저 진행해주세요", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            vmnaviView.updateVacantParkingLocations(PARKING_LEVEL_ID, updatedVacantParkingLocations)
+
+            vmnaviView.updateVacantParkingLocationStates(mapOf(PARKING_LEVEL_ID to updatedVacantParkingLocations))
             Toast.makeText(this, "빈 주차면 3개 업데이트 전송", Toast.LENGTH_SHORT).show()
         }
+
+        switchSetMockMode.setOnCheckedChangeListener { _, isChecked ->
+                Toast.makeText(this, "Mock Mode ON", Toast.LENGTH_SHORT).show()
+        }
+
+        val modes = JupiterMockMode.entries
+        val labels = modes.map { mode ->
+            mode.name.lowercase().replace("_", " ")
+        }
+        val adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_item,
+            labels
+        ).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+
+        spinnerMockMode.adapter = adapter
+        spinnerMockMode.setSelection(0)
+        spinnerMockMode.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: AdapterView<*>,
+                view: View?,
+                position: Int,
+                id: Long
+            ) {
+                selectedMockMode = modes.getOrElse(position) { JupiterMockMode.VEHICLE_OUTDOOR_PARKING }
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) = Unit
+        }
+
+
     }
 
     override fun onDestroy() {
@@ -231,6 +287,96 @@ class MainActivity : AppCompatActivity() {
     private fun requestRequiredPermissionsIfNeeded() {
         if (hasAllRequiredPermissions()) return
         ActivityCompat.requestPermissions(this, runtimePermissions(), PERMISSION_REQUEST_CODE)
+    }
+
+    private fun runAuth(
+        accessKey: String,
+        accessSecretKey: String,
+        onSuccess: (() -> Unit)? = null
+    ) {
+        if (!hasAllRequiredPermissions()) {
+            requestRequiredPermissionsIfNeeded()
+            Toast.makeText(this, "앱 권한을 먼저 허용해주세요", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (accessKey.isEmpty() || accessSecretKey.isEmpty()) {
+            Toast.makeText(
+                this,
+                "Set AUTH_ACCESS_KEY / AUTH_SECRET_ACCESS_KEY in local.properties",
+                Toast.LENGTH_LONG
+            ).show()
+            return
+        }
+
+        TJJupiterVMAuth.auth(application, accessKey, accessSecretKey) { code, success ->
+            Log.d("TJJupiterVM-Demo", "auth code : $code // success : $success")
+            if (success) {
+                isAuthCompleted = true
+                Toast.makeText(this, "Auth 성공", Toast.LENGTH_SHORT).show()
+                onSuccess?.invoke()
+            } else {
+                pendingStartAll = false
+                isAuthCompleted = false
+                isSdkInitCompleted = false
+                isSdkStarted = false
+                Toast.makeText(this, "Auth 실패 // code: $code", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    private fun runInitialize(userId: String, sectorId: Int) {
+        if (!isAuthCompleted) {
+            Toast.makeText(this, "SDK Auth를 먼저 진행해주세요", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        vmnaviView.setDelegate(vmDelegate)
+        vmnaviView.initialize(
+            application,
+            userId,
+            sectorId
+        )
+    }
+
+    private fun runStartAll(
+        accessKey: String,
+        accessSecretKey: String,
+        userId: String,
+        sectorId: Int,
+        vmnaviContainer: FrameLayout,
+        applyMockMode: Boolean
+    ) {
+        pendingStartAll = true
+
+        if (!hasAllRequiredPermissions()) {
+            requestRequiredPermissionsIfNeeded()
+            Toast.makeText(this, "앱 권한을 먼저 허용해주세요", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (!isAuthCompleted) {
+            runAuth(accessKey, accessSecretKey) {
+                runInitialize(userId, sectorId)
+            }
+            return
+        }
+
+        if (!isSdkInitCompleted) {
+            runInitialize(userId, sectorId)
+            return
+        }
+
+        runStartAndShow(vmnaviContainer, applyMockMode)
+    }
+
+    private fun runStartAndShow(vmnaviContainer: FrameLayout, applyMockMode: Boolean) {
+        if (applyMockMode) {
+            vmnaviView.setMockMode(selectedMockMode)
+        }
+        vmnaviView.startService(UserMode.MODE_VEHICLE)
+        vmnaviView.configureFrame(vmnaviContainer)
+        pendingStartAll = false
     }
 
     override fun onRequestPermissionsResult(

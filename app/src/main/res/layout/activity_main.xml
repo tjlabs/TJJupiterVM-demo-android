@@ -15,17 +15,39 @@
             android:orientation="horizontal">
 
             <Button
-                android:id="@+id/buttonInitSdk"
+                android:id="@+id/buttonStartAll"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:text="한번에 시작" />
+
+            <Button
+                android:id="@+id/buttonAuthSdk"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
+                android:text="SDK Auth" />
+
+            <Button
+                android:id="@+id/buttonInitSdk"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1"
                 android:text="SDK Init" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
 
             <Button
                 android:id="@+id/buttonStartSdk"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
                 android:layout_weight="1"
                 android:text="SDK Start" />
 
@@ -36,18 +58,12 @@
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
                 android:text="뷰 보기" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
-            android:orientation="horizontal">
 
             <Button
                 android:id="@+id/buttonCloseView"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
                 android:layout_weight="1"
                 android:text="뷰 종료" />
 
@@ -58,14 +74,35 @@
                 android:layout_marginStart="8dp"
                 android:layout_weight="1"
                 android:text="SDK 종료" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
 
             <Button
                 android:id="@+id/buttonUpdateVacantParking"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
                 android:layout_weight="1"
                 android:text="빈주차 업데이트" />
+
+            <Spinner
+                android:id="@+id/spinnerMockMode"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_weight="1" />
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/switchSetMock"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:checked="false"
+                android:text="Mock Mode" />
+
         </LinearLayout>
 
         <FrameLayout

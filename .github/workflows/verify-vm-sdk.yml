@@ -1,0 +1,152 @@
+name: Verify VM SDK Auth & Init
+
+on:
+  repository_dispatch:
+    types: [sdk-released]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Target TJJupiterVM SDK version (e.g. 1.0.9)"
+        required: true
+        type: string
+      sector_id:
+        description: "Sector ID used by initialize() during verification"
+        required: false
+        type: string
+        default: "20"
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+concurrency:
+  group: verify-vm-sdk-${{ github.event.client_payload.version || inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  resolve-inputs:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.set.outputs.version }}
+      sector_id: ${{ steps.set.outputs.sector_id }}
+    steps:
+      - name: Resolve inputs
+        id: set
+        shell: bash
+        run: |
+          VERSION="${{ github.event.client_payload.version || inputs.version }}"
+          SECTOR_ID="${{ github.event.client_payload.sector_id || inputs.sector_id || '20' }}"
+
+          if [[ -z "$VERSION" ]]; then
+            echo "::error::version is required"
+            exit 1
+          fi
+          if ! echo "$VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::Invalid semver: $VERSION"
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "sector_id=$SECTOR_ID" >> "$GITHUB_OUTPUT"
+          echo "Resolved version=$VERSION sector_id=$SECTOR_ID"
+
+  verify:
+    needs: resolve-inputs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Override JUPITER_VM_SDK_VERSION to release tag
+        shell: bash
+        run: |
+          VERSION="${{ needs.resolve-inputs.outputs.version }}"
+          sed -i "s/^JUPITER_VM_SDK_VERSION=.*/JUPITER_VM_SDK_VERSION=${VERSION}/" gradle.properties
+          grep '^JUPITER_VM_SDK_VERSION=' gradle.properties
+
+      - name: Run androidTest on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        env:
+          ORG_GRADLE_PROJECT_AUTH_ACCESS_KEY: ${{ secrets.AUTH_ACCESS_KEY }}
+          ORG_GRADLE_PROJECT_AUTH_SECRET_ACCESS_KEY: ${{ secrets.AUTH_SECRET_ACCESS_KEY }}
+        with:
+          api-level: 30
+          arch: x86_64
+          target: default
+          force-avd-creation: false
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: true
+          script: >-
+            ./gradlew :app:connectedDebugAndroidTest
+            -Pandroid.testInstrumentationRunnerArguments.class=com.tjlabs.tjjupitervm_demo_android.TJJupiterVMAuthInitTest
+            -Pandroid.testInstrumentationRunnerArguments.sectorId=${{ needs.resolve-inputs.outputs.sector_id }}
+            --stacktrace
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: androidTest-report-${{ needs.resolve-inputs.outputs.version }}
+          path: app/build/reports/androidTests/connected/**
+          if-no-files-found: ignore
+
+  notify:
+    needs: [resolve-inputs, verify]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Notify Slack (Success)
+        if: ${{ needs.verify.result == 'success' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        shell: bash
+        run: |
+          if [[ -z "${SLACK_WEBHOOK_URL}" ]]; then
+            echo "SLACK_WEBHOOK_URL is not set. Skip Slack notification."
+            exit 0
+          fi
+          VERSION="${{ needs.resolve-inputs.outputs.version }}"
+          SECTOR_ID="${{ needs.resolve-inputs.outputs.sector_id }}"
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          payload=$(cat <<EOF
+          {
+            "text": "✅ TJJupiterVM demo Auth & Init 검증 완료\n- repo: ${{ github.repository }}\n- version: ${VERSION}\n- sectorId: ${SECTOR_ID}\n- run: ${RUN_URL}"
+          }
+          EOF
+          )
+          curl -X POST -H 'Content-type: application/json' --data "$payload" "$SLACK_WEBHOOK_URL"
+
+      - name: Notify Slack (Failure)
+        if: ${{ needs.verify.result != 'success' }}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        shell: bash
+        run: |
+          if [[ -z "${SLACK_WEBHOOK_URL}" ]]; then
+            echo "SLACK_WEBHOOK_URL is not set. Skip Slack notification."
+            exit 0
+          fi
+          VERSION="${{ needs.resolve-inputs.outputs.version }}"
+          SECTOR_ID="${{ needs.resolve-inputs.outputs.sector_id }}"
+          RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          payload=$(cat <<EOF
+          {
+            "text": "❌ TJJupiterVM demo Auth & Init 검증 실패\n- repo: ${{ github.repository }}\n- version: ${VERSION}\n- sectorId: ${SECTOR_ID}\n- verify=${{ needs.verify.result }}\n- run: ${RUN_URL}"
+          }
+          EOF
+          )
+          curl -X POST -H 'Content-type: application/json' --data "$payload" "$SLACK_WEBHOOK_URL"
