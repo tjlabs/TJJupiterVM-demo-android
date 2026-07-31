@@ -105,12 +105,31 @@ AUTH_SECRET_ACCESS_KEY=YOUR_SECRET_ACCESS_KEY
 Input:
 - `accessKey: String`
 - `accessSecretKey: String`
+- `region: TJJupiterVMRegion` (optional, default: `TJJupiterVMRegion.SAUDI`)
 
 Output:
 - callback `(code: Int, success: Boolean)`
 
 ```kotlin
-TJJupiterVMAuth.auth(application, accessKey, accessSecretKey) { code, success ->
+TJJupiterVMAuth.auth(
+    application,
+    accessKey,
+    accessSecretKey,
+    region = TJJupiterVMRegion.KOREA
+) { code, success ->
+    // handle auth result
+}
+```
+
+Use production auth server with a specific region:
+
+```kotlin
+TJJupiterVMAuth.auth(
+    application,
+    accessKey,
+    accessSecretKey,
+    region = TJJupiterVMRegion.SAUDI
+) { code, success ->
     // handle auth result
 }
 ```
@@ -118,28 +137,25 @@ TJJupiterVMAuth.auth(application, accessKey, accessSecretKey) { code, success ->
 Use development auth server:
 
 ```kotlin
-TJJupiterVMAuth.setAuthServer(
-    provider = "DEV"
-)
-```
-
-Apply region for auth:
-
-```kotlin
-TJJupiterVMAuth.setAuthRegion("KOREA")
-// or
-TJJupiterVMAuth.setAuthRegion("SAUDI")
-```
-
-Recommended order when custom auth environment is needed:
-
-```kotlin
-TJJupiterVMAuth.setAuthServer("DEV")
-TJJupiterVMAuth.setAuthRegion("KOREA")
-TJJupiterVMAuth.auth(application, accessKey, accessSecretKey) { code, success ->
+TJJupiterVMAuth.authForDevelopment(
+    application,
+    accessKey,
+    accessSecretKey,
+    region = TJJupiterVMRegion.KOREA
+) { code, success ->
     // handle auth result
 }
 ```
+
+Available regions:
+
+- `TJJupiterVMRegion.KOREA`
+- `TJJupiterVMRegion.SAUDI`
+
+Notes:
+- `auth(...)` uses **PROD** environment.
+- `authForDevelopment(...)` uses **DEV** environment for internal development / QA.
+- Region is not set separately. Pass it directly to `auth(...)` or `authForDevelopment(...)`.
 
 ### 3. Set delegate + initialize service
 
