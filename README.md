@@ -217,7 +217,7 @@ vmnaviView.closeFrame()
 Initialize parking states after init success:
 
 ```kotlin
-vmnaviView.setVacantParkingLocationStates(
+vmnaviView.setParkingLocationStates(
     mapOf(
         PARKING_LEVEL_ID to mapOf(
             "OB-1h7zbmxfa10z93809" to TJJupiterVMModel.ParkingLocationState.OCCUPIED,
@@ -247,7 +247,7 @@ val updatedOccupiedParkingLocations = mapOf(
     "OB-1h7zbmxfa10z93809" to TJJupiterVMModel.ParkingLocationState.OCCUPIED,
     "OB-1h84se62jidlw3811" to TJJupiterVMModel.ParkingLocationState.OCCUPIED
 )
-vmnaviView.updateVacantParkingLocationStates(
+vmnaviView.updateParkingLocationStates(
     mapOf(parkingLevelId to updatedOccupiedParkingLocations)
 )
 ```
