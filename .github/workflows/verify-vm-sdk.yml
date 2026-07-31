@@ -1,4 +1,4 @@
-name: Verify VM SDK Auth & Init
+name: Verify VM SDK Auth, Init & Mock
 
 on:
   repository_dispatch:
@@ -14,6 +14,15 @@ on:
         required: false
         type: string
         default: "20"
+      region:
+        description: "Target region to verify"
+        required: false
+        type: choice
+        default: "KOREA"
+        options:
+          - KOREA
+          - SAUDI
+          - ALL
 
 permissions:
   contents: read
@@ -31,6 +40,8 @@ jobs:
     outputs:
       version: ${{ steps.set.outputs.version }}
       sector_id: ${{ steps.set.outputs.sector_id }}
+      region_matrix: ${{ steps.set.outputs.region_matrix }}
+      region_label: ${{ steps.set.outputs.region_label }}
     steps:
       - name: Resolve inputs
         id: set
@@ -38,6 +49,8 @@ jobs:
         run: |
           VERSION="${{ github.event.client_payload.version || inputs.version }}"
           SECTOR_ID="${{ github.event.client_payload.sector_id || inputs.sector_id || '20' }}"
+          REGION_RAW="${{ github.event.client_payload.region || inputs.region || 'KOREA' }}"
+          REGION="$(echo "$REGION_RAW" | tr '[:lower:]' '[:upper:]')"
 
           if [[ -z "$VERSION" ]]; then
             echo "::error::version is required"
@@ -47,14 +60,35 @@ jobs:
             echo "::error::Invalid semver: $VERSION"
             exit 1
           fi
+          case "$REGION" in
+            KOREA)
+              REGION_MATRIX='{"include":[{"region":"KOREA"}]}'
+              ;;
+            SAUDI)
+              REGION_MATRIX='{"include":[{"region":"SAUDI"}]}'
+              ;;
+            ALL)
+              REGION_MATRIX='{"include":[{"region":"KOREA"},{"region":"SAUDI"}]}'
+              ;;
+            *)
+              echo "::error::Invalid region: $REGION"
+              exit 1
+              ;;
+          esac
 
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "sector_id=$SECTOR_ID" >> "$GITHUB_OUTPUT"
-          echo "Resolved version=$VERSION sector_id=$SECTOR_ID"
+          echo "region_matrix=$REGION_MATRIX" >> "$GITHUB_OUTPUT"
+          echo "region_label=$REGION" >> "$GITHUB_OUTPUT"
+          echo "Resolved version=$VERSION sector_id=$SECTOR_ID region=$REGION"
 
   verify:
     needs: resolve-inputs
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.resolve-inputs.outputs.region_matrix) }}
+    name: Verify (${{ matrix.region }})
     steps:
       - name: Checkout
         uses: actions/checkout@v5
@@ -78,11 +112,49 @@ jobs:
           sed -i "s/^JUPITER_VM_SDK_VERSION=.*/JUPITER_VM_SDK_VERSION=${VERSION}/" gradle.properties
           grep '^JUPITER_VM_SDK_VERSION=' gradle.properties
 
-      - name: Run androidTest on emulator
-        uses: reactivecircus/android-emulator-runner@v2
+      - name: Resolve region secrets
+        id: resolve-secrets
+        shell: bash
         env:
-          ORG_GRADLE_PROJECT_AUTH_ACCESS_KEY: ${{ secrets.AUTH_ACCESS_KEY }}
-          ORG_GRADLE_PROJECT_AUTH_SECRET_ACCESS_KEY: ${{ secrets.AUTH_SECRET_ACCESS_KEY }}
+          AUTH_ACCESS_KEY_KOREA: ${{ secrets.AUTH_ACCESS_KEY_KOREA }}
+          AUTH_SECRET_ACCESS_KEY_KOREA: ${{ secrets.AUTH_SECRET_ACCESS_KEY_KOREA }}
+          AUTH_ACCESS_KEY_SAUDI: ${{ secrets.AUTH_ACCESS_KEY_SAUDI }}
+          AUTH_SECRET_ACCESS_KEY_SAUDI: ${{ secrets.AUTH_SECRET_ACCESS_KEY_SAUDI }}
+        run: |
+          REGION="${{ matrix.region }}"
+          ACCESS_VAR="AUTH_ACCESS_KEY_${REGION}"
+          SECRET_VAR="AUTH_SECRET_ACCESS_KEY_${REGION}"
+          ACCESS_VALUE="${!ACCESS_VAR:-}"
+          SECRET_VALUE="${!SECRET_VAR:-}"
+
+          if [[ -z "$ACCESS_VALUE" ]]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "reason=Skipping ${REGION} verification because ${ACCESS_VAR} is not configured" >> "$GITHUB_OUTPUT"
+            echo "Skipping ${REGION} verification because ${ACCESS_VAR} is not configured"
+            exit 0
+          fi
+
+          if [[ -z "$SECRET_VALUE" ]]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "reason=Skipping ${REGION} verification because ${SECRET_VAR} is not configured" >> "$GITHUB_OUTPUT"
+            echo "Skipping ${REGION} verification because ${SECRET_VAR} is not configured"
+            exit 0
+          fi
+
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+          echo "ORG_GRADLE_PROJECT_AUTH_ACCESS_KEY=$ACCESS_VALUE" >> "$GITHUB_ENV"
+          echo "ORG_GRADLE_PROJECT_AUTH_SECRET_ACCESS_KEY=$SECRET_VALUE" >> "$GITHUB_ENV"
+          echo "Using region-specific secrets: ${ACCESS_VAR}, ${SECRET_VAR}"
+
+      - name: Skip verification
+        if: steps.resolve-secrets.outputs.configured != 'true'
+        shell: bash
+        run: |
+          echo "${{ steps.resolve-secrets.outputs.reason }}"
+
+      - name: Run auth/init and mock androidTest on emulator
+        if: steps.resolve-secrets.outputs.configured == 'true'
+        uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 30
           arch: x86_64
@@ -92,15 +164,22 @@ jobs:
           disable-animations: true
           script: >-
             ./gradlew :app:connectedDebugAndroidTest
-            -Pandroid.testInstrumentationRunnerArguments.class=com.tjlabs.tjjupitervm_demo_android.TJJupiterVMAuthInitTest
+            -Pandroid.testInstrumentationRunnerArguments.class=com.tjlabs.tjjupitervm_demo_android.AuthInitTest
             -Pandroid.testInstrumentationRunnerArguments.sectorId=${{ needs.resolve-inputs.outputs.sector_id }}
+            -Pandroid.testInstrumentationRunnerArguments.userId=ci_vm_verify_user_${{ matrix.region }}
+            --stacktrace
+            &&
+            ./gradlew :app:connectedDebugAndroidTest
+            -Pandroid.testInstrumentationRunnerArguments.class=com.tjlabs.tjjupitervm_demo_android.MockModeTest
+            -Pandroid.testInstrumentationRunnerArguments.sectorId=${{ needs.resolve-inputs.outputs.sector_id }}
+            -Pandroid.testInstrumentationRunnerArguments.userId=ci_vm_verify_user_${{ matrix.region }}
             --stacktrace
 
       - name: Upload test reports
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: androidTest-report-${{ needs.resolve-inputs.outputs.version }}
+          name: androidTest-report-${{ needs.resolve-inputs.outputs.version }}-${{ matrix.region }}
           path: app/build/reports/androidTests/connected/**
           if-no-files-found: ignore
 
@@ -121,10 +200,11 @@ jobs:
           fi
           VERSION="${{ needs.resolve-inputs.outputs.version }}"
           SECTOR_ID="${{ needs.resolve-inputs.outputs.sector_id }}"
+          REGION="${{ needs.resolve-inputs.outputs.region_label }}"
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           payload=$(cat <<EOF
           {
-            "text": "✅ TJJupiterVM demo Auth & Init 검증 완료\n- repo: ${{ github.repository }}\n- version: ${VERSION}\n- sectorId: ${SECTOR_ID}\n- run: ${RUN_URL}"
+            "text": "✅ TJJupiterVM demo Auth/Init/Mock 검증 완료\n- repo: ${{ github.repository }}\n- version: ${VERSION}\n- sectorId: ${SECTOR_ID}\n- region: ${REGION}\n- run: ${RUN_URL}"
           }
           EOF
           )
@@ -142,10 +222,11 @@ jobs:
           fi
           VERSION="${{ needs.resolve-inputs.outputs.version }}"
           SECTOR_ID="${{ needs.resolve-inputs.outputs.sector_id }}"
+          REGION="${{ needs.resolve-inputs.outputs.region_label }}"
           RUN_URL="https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           payload=$(cat <<EOF
           {
-            "text": "❌ TJJupiterVM demo Auth & Init 검증 실패\n- repo: ${{ github.repository }}\n- version: ${VERSION}\n- sectorId: ${SECTOR_ID}\n- verify=${{ needs.verify.result }}\n- run: ${RUN_URL}"
+            "text": "❌ TJJupiterVM demo Auth/Init/Mock 검증 실패\n- repo: ${{ github.repository }}\n- version: ${VERSION}\n- sectorId: ${SECTOR_ID}\n- region: ${REGION}\n- verify=${{ needs.verify.result }}\n- run: ${RUN_URL}"
           }
           EOF
           )

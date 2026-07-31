@@ -6,14 +6,25 @@ import android.widget.FrameLayout
 import com.tjlabs.tjjupitervm_sdk_android.TJJupiterVMView
 
 class VMHostActivity : Activity() {
+    lateinit var container: FrameLayout
+        private set
+
     lateinit var vmView: TJJupiterVMView
         private set
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        val container = FrameLayout(this)
+        container = FrameLayout(this)
         vmView = TJJupiterVMView(this)
-        container.addView(vmView)
         setContentView(container)
+    }
+
+    override fun onDestroy() {
+        if (::vmView.isInitialized) {
+            vmView.stopService()
+            vmView.closeFrame()
+            vmView.release()
+        }
+        super.onDestroy()
     }
 }
