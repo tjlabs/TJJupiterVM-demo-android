@@ -112,7 +112,7 @@ class MainActivity : AppCompatActivity() {
                 isSdkInitCompleted = isSuccess
                 if (isSuccess) {
                     Toast.makeText(this@MainActivity, "SDK init 성공", Toast.LENGTH_SHORT).show()
-                    vmnaviView.setOccupiedParkingLocationStates(
+                    vmnaviView.setParkingLocationStates(
                         mapOf(PARKING_LEVEL_ID to initOccupiedParkingLocations)
                     )
 
@@ -219,7 +219,7 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            vmnaviView.updateOccupiedParkingLocationStates(mapOf(PARKING_LEVEL_ID to updatedOccupiedParkingLocations))
+            vmnaviView.updateParkingLocationStates(mapOf(PARKING_LEVEL_ID to updatedOccupiedParkingLocations))
             Toast.makeText(this, "점유 주차면 3개 업데이트 전송", Toast.LENGTH_SHORT).show()
         }
 
