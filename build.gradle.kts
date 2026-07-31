@@ -1,4 +1,5 @@
 import java.util.regex.Matcher
+import java.util.Properties
 
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 plugins {
@@ -13,8 +14,10 @@ val syncReadmeVersion by tasks.registering {
     doLast {
         val readmeFile = layout.projectDirectory.file("README.md").asFile
         val appGradleFile = layout.projectDirectory.file("app/build.gradle.kts").asFile
+        val gradlePropertiesFile = layout.projectDirectory.file("gradle.properties").asFile
         if (!readmeFile.exists()) return@doLast
         if (!appGradleFile.exists()) return@doLast
+        if (!gradlePropertiesFile.exists()) return@doLast
 
         fun replaceBetweenMarkers(content: String, start: String, end: String, body: String): String {
             val replacement = buildString {
@@ -31,11 +34,10 @@ val syncReadmeVersion by tasks.registering {
         }
 
         val appGradleText = appGradleFile.readText()
-        val jupiterVmSdkVersion = Regex("""val\s+jupiterVmSdkVersion\s*=\s*"([^"]+)"""")
-            .find(appGradleText)
-            ?.groupValues
-            ?.getOrNull(1)
-            ?: "unknown"
+        val gradleProperties = Properties().apply {
+            gradlePropertiesFile.inputStream().use { load(it) }
+        }
+        val jupiterVmSdkVersion = gradleProperties.getProperty("JUPITER_VM_SDK_VERSION", "unknown").trim()
         val implementationLines = appGradleText
             .lineSequence()
             .map { it.trim() }

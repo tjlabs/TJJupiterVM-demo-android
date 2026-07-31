@@ -1,0 +1,49 @@
+name: Verify Branch and Version Consistency
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  verify:
+    if: startsWith(github.head_ref, 'release/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR head
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+
+      - name: Branch name must match gradle.properties version
+        shell: bash
+        run: |
+          BRANCH_VERSION="${GITHUB_HEAD_REF#release/}"
+          FILE_VERSION="$(grep '^JUPITER_VM_SDK_VERSION=' gradle.properties | cut -d '=' -f2 | tr -d '[:space:]')"
+          echo "branch=$BRANCH_VERSION file=$FILE_VERSION"
+          if [ "$BRANCH_VERSION" != "$FILE_VERSION" ]; then
+            echo "::error::Branch is release/$BRANCH_VERSION but gradle.properties is $FILE_VERSION. Update JUPITER_VM_SDK_VERSION to match."
+            exit 1
+          fi
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: README must be in sync
+        shell: bash
+        run: |
+          ./gradlew syncReadmeVersion
+          if ! git diff --exit-code README.md; then
+            echo "::error::README is not in sync with gradle.properties/app build dependencies. Run ./gradlew syncReadmeVersion and commit the result."
+            exit 1
+          fi
