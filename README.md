@@ -115,6 +115,32 @@ TJJupiterVMAuth.auth(application, accessKey, accessSecretKey) { code, success ->
 }
 ```
 
+Use development auth server:
+
+```kotlin
+TJJupiterVMAuth.setAuthServer(
+    provider = "DEV"
+)
+```
+
+Apply region for auth:
+
+```kotlin
+TJJupiterVMAuth.setAuthRegion("KOREA")
+// or
+TJJupiterVMAuth.setAuthRegion("SAUDI")
+```
+
+Recommended order when custom auth environment is needed:
+
+```kotlin
+TJJupiterVMAuth.setAuthServer("DEV")
+TJJupiterVMAuth.setAuthRegion("KOREA")
+TJJupiterVMAuth.auth(application, accessKey, accessSecretKey) { code, success ->
+    // handle auth result
+}
+```
+
 ### 3. Set delegate + initialize service
 
 Input:
@@ -176,7 +202,12 @@ Initialize parking states after init success:
 
 ```kotlin
 vmnaviView.setVacantParkingLocationStates(
-    mapOf(PARKING_LEVEL_ID to initVacantParkingLocations)
+    mapOf(
+        PARKING_LEVEL_ID to mapOf(
+            "OB-1h7zbmxfa10z93809" to TJJupiterVMModel.ParkingLocationState.OCCUPIED,
+            "OB-1h84se62jidlw3811" to TJJupiterVMModel.ParkingLocationState.OCCUPIED
+        )
+    )
 )
 vmnaviView.setSavedParkingLocations(
     mapOf(PARKING_LEVEL_ID to initParkingLocationIds)
@@ -191,17 +222,17 @@ vmnaviView.updateSavedParkingLocations(
 )
 ```
 
-Vacant parking update example (hardcoded button):
+Occupied parking update example (hardcoded button):
 
 ```kotlin
 val parkingLevelId = 52
-val updatedVacantParkingLocations = mapOf(
-    "OB-1h82101id68tx3548" to TJJupiterVMModel.ParkingLocationState.VACANT,
-    "OB-1h7zbmxfa10z93809" to TJJupiterVMModel.ParkingLocationState.VACANT,
-    "OB-1h84se62jidlw3811" to TJJupiterVMModel.ParkingLocationState.VACANT
+val updatedOccupiedParkingLocations = mapOf(
+    "OB-1h82101id68tx3548" to TJJupiterVMModel.ParkingLocationState.OCCUPIED,
+    "OB-1h7zbmxfa10z93809" to TJJupiterVMModel.ParkingLocationState.OCCUPIED,
+    "OB-1h84se62jidlw3811" to TJJupiterVMModel.ParkingLocationState.OCCUPIED
 )
 vmnaviView.updateVacantParkingLocationStates(
-    mapOf(parkingLevelId to updatedVacantParkingLocations)
+    mapOf(parkingLevelId to updatedOccupiedParkingLocations)
 )
 ```
 

@@ -19,6 +19,7 @@ import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.tjlabs.tjjupitervm_sdk_android.TJJupiterVMAuth
 import com.tjlabs.tjjupitervm_sdk_android.TJJupiterVMModel
+import com.tjlabs.tjjupitervm_sdk_android.TJJupiterVMRegion
 import com.tjlabs.tjjupitervm_sdk_android.TJJupiterVMView
 import com.tjlabs.tjlabscommon_sdk_android.uvd.UserMode
 import com.tjlabs.tjlabsjupiter_sdk_android.InitErrorCode
@@ -41,21 +42,17 @@ class MainActivity : AppCompatActivity() {
     private var selectedMockMode: JupiterMockMode = JupiterMockMode.VEHICLE_OUTDOOR_PARKING
 
     private val initParkingLocationIds = listOf("OB-rhaj0t4ctwzb4491")
-    private val initialVacantParkingLocations = mapOf(
-        "OB-rhaj0t4ctwzb4491" to TJJupiterVMModel.ParkingLocationState.VACANT
-    )
-    private val initVacantParkingLocations = mapOf(
-        "OB-1h7zbmxfa10z93809" to TJJupiterVMModel.ParkingLocationState.VACANT,
-        "OB-1h84se62jidlw3811" to TJJupiterVMModel.ParkingLocationState.VACANT
+
+    private val initOccupiedParkingLocations = mapOf(
+        "OB-1h7zbmxfa10z93809" to TJJupiterVMModel.ParkingLocationState.OCCUPIED,
+        "OB-1h84se62jidlw3811" to TJJupiterVMModel.ParkingLocationState.OCCUPIED
     )
 
-
-    private val updatedVacantParkingLocations = mapOf(
-        "OB-1h82101id68tx3548" to TJJupiterVMModel.ParkingLocationState.VACANT,
-        "OB-1h7zbmxfa10z93809" to TJJupiterVMModel.ParkingLocationState.VACANT,
-        "OB-1h84se62jidlw3811" to TJJupiterVMModel.ParkingLocationState.VACANT
+    private val updatedOccupiedParkingLocations = mapOf(
+        "OB-1h82101id68tx3548" to TJJupiterVMModel.ParkingLocationState.OCCUPIED,
+        "OB-1h7zbmxfa10z93809" to TJJupiterVMModel.ParkingLocationState.OCCUPIED,
+        "OB-1h84se62jidlw3811" to TJJupiterVMModel.ParkingLocationState.OCCUPIED
     )
-
 
     private lateinit var vmnaviView: TJJupiterVMView
     private lateinit var vmDelegate: TJJupiterVMView.TJJupiterVMViewDelegate
@@ -115,8 +112,8 @@ class MainActivity : AppCompatActivity() {
                 isSdkInitCompleted = isSuccess
                 if (isSuccess) {
                     Toast.makeText(this@MainActivity, "SDK init 성공", Toast.LENGTH_SHORT).show()
-                    vmnaviView.setVacantParkingLocationStates(
-                        mapOf(PARKING_LEVEL_ID to initVacantParkingLocations)
+                    vmnaviView.setOccupiedParkingLocationStates(
+                        mapOf(PARKING_LEVEL_ID to initOccupiedParkingLocations)
                     )
 
                     vmnaviView.setSavedParkingLocations(
@@ -216,14 +213,14 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "SDK 종료", Toast.LENGTH_SHORT).show()
         }
 
-        findViewById<Button>(R.id.buttonUpdateVacantParking).setOnClickListener {
+        findViewById<Button>(R.id.buttonUpdateOccupiedParking).setOnClickListener {
             if (!isSdkInitCompleted) {
                 Toast.makeText(this, "SDK init을 먼저 진행해주세요", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            vmnaviView.updateVacantParkingLocationStates(mapOf(PARKING_LEVEL_ID to updatedVacantParkingLocations))
-            Toast.makeText(this, "빈 주차면 3개 업데이트 전송", Toast.LENGTH_SHORT).show()
+            vmnaviView.updateOccupiedParkingLocationStates(mapOf(PARKING_LEVEL_ID to updatedOccupiedParkingLocations))
+            Toast.makeText(this, "점유 주차면 3개 업데이트 전송", Toast.LENGTH_SHORT).show()
         }
 
         switchSetMockMode.setOnCheckedChangeListener { _, isChecked ->
@@ -308,7 +305,7 @@ class MainActivity : AppCompatActivity() {
             ).show()
             return
         }
-
+        
         TJJupiterVMAuth.auth(application, accessKey, accessSecretKey) { code, success ->
             Log.d("TJJupiterVM-Demo", "auth code : $code // success : $success")
             if (success) {

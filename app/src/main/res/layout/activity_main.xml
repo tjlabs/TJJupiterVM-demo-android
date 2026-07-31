@@ -83,11 +83,11 @@
             android:orientation="horizontal">
 
             <Button
-                android:id="@+id/buttonUpdateVacantParking"
+                android:id="@+id/buttonUpdateOccupiedParking"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="빈주차 업데이트" />
+                android:text="점유 주차면 업데이트" />
 
             <Spinner
                 android:id="@+id/spinnerMockMode"
