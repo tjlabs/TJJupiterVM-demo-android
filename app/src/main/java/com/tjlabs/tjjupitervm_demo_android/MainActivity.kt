@@ -10,6 +10,7 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.FrameLayout
+import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
@@ -31,6 +32,23 @@ class MainActivity : AppCompatActivity() {
     companion object {
         private const val PERMISSION_REQUEST_CODE = 1001
         private const val PARKING_LEVEL_ID = 52 //example id
+        private const val DEFAULT_SECTOR_ID = 20
+
+        // Hardcoded sector 목록 (tenant/me/sectors API 대체).
+        // 필요 시 신규 sector 를 이 리스트에 추가하면 즉시 spinner 에 반영된다.
+        private val HARDCODED_SECTORS: List<TenantSectorSummary> = listOf(
+            TenantSectorSummary(1, "TJLABS Seoul"),
+            TenantSectorSummary(6, "COEX"),
+            TenantSectorSummary(8, "Hana Financial Group"),
+            TenantSectorSummary(20, "Songdo Convensia"),
+            TenantSectorSummary(111, "Samhan Parking"),
+            TenantSectorSummary(112, "Bujairi Parking"),
+            TenantSectorSummary(113, "King Salman Knowledge Foundation"),
+        )
+    }
+
+    data class TenantSectorSummary(val id: Int, val name: String) {
+        val label: String get() = "$name (id=$id)"
     }
 
     private var isSdkInitCompleted = false
@@ -40,6 +58,14 @@ class MainActivity : AppCompatActivity() {
     private var pendingParkingSpaceId: String? = null
     private var pendingParkingSpaceLevelId: Int? = null
     private var selectedMockMode: JupiterMockMode = JupiterMockMode.VEHICLE_OUTDOOR_PARKING
+    private var sectorOptions: List<TenantSectorSummary> = HARDCODED_SECTORS
+    private var selectedSectorId: Int = DEFAULT_SECTOR_ID
+    private var suppressSectorCallback = false
+    private val authRegion: TJJupiterVMRegion = TJJupiterVMRegion.SAUDI
+    // OFF=PROD (기본), ON=DEV. switchDevEnv 토글 상태와 동기화.
+    private var isDevEnv: Boolean = false
+    private var isViewOpen = false
+    private var pendingAutoAuth = false
 
     private val initParkingLocationIds = listOf("OB-rhaj0t4ctwzb4491")
 
@@ -64,7 +90,6 @@ class MainActivity : AppCompatActivity() {
 
         val accessKey = BuildConfig.AUTH_ACCESS_KEY.trim()
         val accessSecretKey = BuildConfig.AUTH_SECRET_ACCESS_KEY.trim()
-        val sectorId = 20
         val userId = "demo_user"
 
         val vmnaviContainer = findViewById<FrameLayout>(R.id.vmnaviContainer)
@@ -75,6 +100,31 @@ class MainActivity : AppCompatActivity() {
         val buttonParkingSheetConfirm = findViewById<Button>(R.id.buttonParkingSheetConfirm)
         val switchSetMockMode = findViewById<SwitchCompat>(R.id.switchSetMock)
         val spinnerMockMode = findViewById<Spinner>(R.id.spinnerMockMode)
+        val spinnerSector = findViewById<Spinner>(R.id.spinnerSector)
+        val textSectorStatus = findViewById<TextView>(R.id.textSectorStatus)
+        val switchDevEnv = findViewById<SwitchCompat>(R.id.switchDevEnv)
+        val textEnvStatus = findViewById<TextView>(R.id.textEnvStatus)
+        switchDevEnv.setOnCheckedChangeListener { _, isChecked ->
+            // auth 후 env 변경 시 재-auth 없이 다음 액션이 자동으로 반영되도록 상태만 갱신.
+            // 이미 auth 된 상태에서 env 를 바꾸면 다음 initialize/startService 는 이전 세션 토큰을
+            // 재사용하지 못하므로 사용자가 명시적으로 다시 auth 하도록 안내.
+            isDevEnv = isChecked
+            textEnvStatus.text = if (isChecked) "DEV" else "PROD"
+            if (isAuthCompleted) {
+                isAuthCompleted = false
+                isSdkInitCompleted = false
+                isSdkStarted = false
+                Toast.makeText(this, "Env 변경됨 — 다시 Auth 필요", Toast.LENGTH_SHORT).show()
+            }
+        }
+        val controlsPanel = findViewById<LinearLayout>(R.id.controlsPanel)
+        val buttonToggleControls = findViewById<Button>(R.id.buttonToggleControls)
+        buttonToggleControls.setOnClickListener {
+            val nowVisible = controlsPanel.visibility != View.VISIBLE
+            controlsPanel.visibility = if (nowVisible) View.VISIBLE else View.GONE
+            buttonToggleControls.text = if (nowVisible) "컨트롤 접기 ▲" else "컨트롤 펼치기 ▼"
+        }
+        renderSectors(spinnerSector, textSectorStatus, sectorOptions)
 
         vmnaviView = TJJupiterVMView(this)
 
@@ -172,11 +222,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         findViewById<Button>(R.id.buttonStartAll).setOnClickListener {
-            runStartAll(accessKey, accessSecretKey, userId, sectorId, vmnaviContainer, switchSetMockMode.isChecked)
+            runStartAll(accessKey, accessSecretKey, userId, selectedSectorId, vmnaviContainer, switchSetMockMode.isChecked)
         }
 
         findViewById<Button>(R.id.buttonInitSdk).setOnClickListener {
-            runInitialize(userId, sectorId)
+            runInitialize(userId, selectedSectorId)
         }
 
         findViewById<Button>(R.id.buttonStartSdk).setOnClickListener {
@@ -193,22 +243,22 @@ class MainActivity : AppCompatActivity() {
             vmnaviView.startService(UserMode.MODE_VEHICLE)
         }
 
-        findViewById<Button>(R.id.buttonShowView).setOnClickListener {
-            if (isSdkInitCompleted) {
-                vmnaviView.configureFrame(vmnaviContainer)
+        val buttonToggleView = findViewById<Button>(R.id.buttonToggleView)
+        buttonToggleView.setOnClickListener {
+            if (isViewOpen) {
+                closeView(vmnaviContainer, buttonToggleView)
             } else {
-                Toast.makeText(this, "SDK init을 먼저 진행해주세요", Toast.LENGTH_SHORT).show()
+                if (!isSdkInitCompleted) {
+                    Toast.makeText(this, "SDK init을 먼저 진행해주세요", Toast.LENGTH_SHORT).show()
+                    return@setOnClickListener
+                }
+                openView(vmnaviContainer, buttonToggleView)
             }
-        }
-
-        findViewById<Button>(R.id.buttonCloseView).setOnClickListener {
-            vmnaviView.closeFrame()
-            Toast.makeText(this, "뷰 종료", Toast.LENGTH_SHORT).show()
         }
 
         findViewById<Button>(R.id.buttonStopSdk).setOnClickListener {
             vmnaviView.stopService()
-            vmnaviView.closeFrame()
+            closeView(vmnaviContainer, buttonToggleView)
             isSdkStarted = false
             Toast.makeText(this, "SDK 종료", Toast.LENGTH_SHORT).show()
         }
@@ -254,7 +304,18 @@ class MainActivity : AppCompatActivity() {
             override fun onNothingSelected(parent: AdapterView<*>) = Unit
         }
 
+        autoAuthIfPossible(accessKey, accessSecretKey)
+    }
 
+    private fun autoAuthIfPossible(accessKey: String, accessSecretKey: String) {
+        if (isAuthCompleted) return
+        if (accessKey.isEmpty() || accessSecretKey.isEmpty()) return
+        if (!hasAllRequiredPermissions()) {
+            pendingAutoAuth = true
+            return
+        }
+        pendingAutoAuth = false
+        runAuth(accessKey, accessSecretKey)
     }
 
     override fun onDestroy() {
@@ -306,19 +367,75 @@ class MainActivity : AppCompatActivity() {
             return
         }
         
-        TJJupiterVMAuth.auth(application, accessKey, accessSecretKey) { code, success ->
-            Log.d("TJJupiterVM-Demo", "auth code : $code // success : $success")
+        val envLabel = if (isDevEnv) "DEV" else "PROD"
+        Log.d("TJJupiterVM-Demo", "auth start env=$envLabel region=$authRegion")
+        val authCallback: (Int, Boolean) -> Unit = { code, success ->
+            Log.d("TJJupiterVM-Demo", "auth code : $code // success : $success (env=$envLabel)")
             if (success) {
                 isAuthCompleted = true
-                Toast.makeText(this, "Auth 성공", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Auth 성공 ($envLabel)", Toast.LENGTH_SHORT).show()
                 onSuccess?.invoke()
             } else {
                 pendingStartAll = false
                 isAuthCompleted = false
                 isSdkInitCompleted = false
                 isSdkStarted = false
-                Toast.makeText(this, "Auth 실패 // code: $code", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Auth 실패 // code: $code ($envLabel)", Toast.LENGTH_SHORT).show()
             }
+        }
+        if (isDevEnv) {
+            TJJupiterVMAuth.authForDevelopment(application, accessKey, accessSecretKey, authRegion, authCallback)
+        } else {
+            TJJupiterVMAuth.auth(application, accessKey, accessSecretKey, authRegion, authCallback)
+        }
+    }
+
+    private fun renderSectors(
+        spinner: Spinner,
+        status: TextView,
+        sectors: List<TenantSectorSummary>
+    ) {
+        if (sectors.isEmpty()) {
+            suppressSectorCallback = true
+            spinner.adapter = ArrayAdapter(
+                this,
+                android.R.layout.simple_spinner_item,
+                listOf("(auth 후 로드됩니다)")
+            ).apply {
+                setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+            }
+            spinner.onItemSelectedListener = null
+            suppressSectorCallback = false
+            status.text = "Sectors not loaded"
+            return
+        }
+
+        val labels = sectors.map { it.label }
+        suppressSectorCallback = true
+        spinner.adapter = ArrayAdapter(
+            this,
+            android.R.layout.simple_spinner_item,
+            labels
+        ).apply {
+            setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        }
+        val idx = sectors.indexOfFirst { it.id == selectedSectorId }.let { if (it >= 0) it else 0 }
+        spinner.setSelection(idx)
+        selectedSectorId = sectors[idx].id
+        suppressSectorCallback = false
+        status.text = "${sectors.size} sector(s) loaded"
+        spinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(
+                parent: AdapterView<*>,
+                view: View?,
+                position: Int,
+                id: Long
+            ) {
+                if (suppressSectorCallback) return
+                selectedSectorId = sectors.getOrNull(position)?.id ?: DEFAULT_SECTOR_ID
+            }
+
+            override fun onNothingSelected(parent: AdapterView<*>) = Unit
         }
     }
 
@@ -354,7 +471,7 @@ class MainActivity : AppCompatActivity() {
 
         if (!isAuthCompleted) {
             runAuth(accessKey, accessSecretKey) {
-                runInitialize(userId, sectorId)
+                runInitialize(userId, selectedSectorId)
             }
             return
         }
@@ -372,8 +489,22 @@ class MainActivity : AppCompatActivity() {
             vmnaviView.setMockMode(selectedMockMode)
         }
         vmnaviView.startService(UserMode.MODE_VEHICLE)
-        vmnaviView.configureFrame(vmnaviContainer)
+        openView(vmnaviContainer, findViewById(R.id.buttonToggleView))
         pendingStartAll = false
+    }
+
+    private fun openView(container: FrameLayout, toggleButton: Button) {
+        container.visibility = View.VISIBLE
+        vmnaviView.configureFrame(container)
+        isViewOpen = true
+        toggleButton.text = "뷰 닫기"
+    }
+
+    private fun closeView(container: FrameLayout, toggleButton: Button) {
+        vmnaviView.closeFrame()
+        container.visibility = View.GONE
+        isViewOpen = false
+        toggleButton.text = "뷰 열기"
     }
 
     override fun onRequestPermissionsResult(
@@ -387,6 +518,14 @@ class MainActivity : AppCompatActivity() {
         val allGranted = grantResults.isNotEmpty() && grantResults.all { it == PackageManager.PERMISSION_GRANTED }
         if (!allGranted) {
             Toast.makeText(this, "필수 권한이 거부되었습니다", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        if (pendingAutoAuth) {
+            autoAuthIfPossible(
+                BuildConfig.AUTH_ACCESS_KEY.trim(),
+                BuildConfig.AUTH_SECRET_ACCESS_KEY.trim(),
+            )
         }
     }
 }
