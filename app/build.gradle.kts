@@ -80,9 +80,7 @@ android {
 }
 
 dependencies {
-    // Local Maven 배포본 사용 (개발 · 검증용). 정식 릴리스 전 원복:
-    //   implementation("com.github.tjlabs:TJJupiterVM-sdk-android:$jupiterVmSdkVersion")
-    implementation("com.tjlabs:TJJupiterVM-sdk-android:$jupiterVmSdkVersion")
+    implementation("com.github.tjlabs:TJJupiterVM-sdk-android:$jupiterVmSdkVersion")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)

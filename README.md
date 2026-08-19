@@ -78,7 +78,7 @@ dependencyResolutionManagement {
 // app/build.gradle.kts
 <!-- APP_DEPENDENCIES_START -->
 dependencies {
-    implementation("com.tjlabs:TJJupiterVM-sdk-android:$jupiterVmSdkVersion")
+    implementation("com.github.tjlabs:TJJupiterVM-sdk-android:$jupiterVmSdkVersion")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
