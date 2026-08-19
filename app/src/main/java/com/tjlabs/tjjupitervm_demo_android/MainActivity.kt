@@ -127,6 +127,7 @@ class MainActivity : AppCompatActivity() {
         renderSectors(spinnerSector, textSectorStatus, sectorOptions)
 
         vmnaviView = TJJupiterVMView(this)
+        TJJupiterVMView.setLoggerEnabled(true)
 
         val hideParkingSheet = {
             pendingParkingSpaceId = null
