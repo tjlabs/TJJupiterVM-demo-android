@@ -5,7 +5,7 @@
 TJJupiterVM-demo-android is a minimal Android sample app for integrating **TJLabs Jupiter VM SDK (JitPack)**.
 
 <!-- JUPITER_VM_SDK_VERSION_START -->
-Jupiter VM SDK version: 1.0.13
+Jupiter VM SDK version: 1.0.14
 <!-- JUPITER_VM_SDK_VERSION_END -->
 
 The app demonstrates a simple VM service lifecycle with:
@@ -78,7 +78,7 @@ dependencyResolutionManagement {
 // app/build.gradle.kts
 <!-- APP_DEPENDENCIES_START -->
 dependencies {
-    implementation("com.github.tjlabs:TJJupiterVM-sdk-android:$jupiterVmSdkVersion")
+    implementation("com.tjlabs:TJJupiterVM-sdk-android:$jupiterVmSdkVersion")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
