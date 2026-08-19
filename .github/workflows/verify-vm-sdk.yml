@@ -190,12 +190,14 @@ jobs:
             -Pandroid.testInstrumentationRunnerArguments.class=com.tjlabs.tjjupitervm_demo_android.AuthInitTest
             -Pandroid.testInstrumentationRunnerArguments.sectorId=${{ matrix.sector_id }}
             -Pandroid.testInstrumentationRunnerArguments.userId=ci_vm_verify_user_${{ matrix.region }}
+            -Pandroid.testInstrumentationRunnerArguments.region=${{ matrix.region }}
             --stacktrace
             &&
             ./gradlew :app:connectedDebugAndroidTest
             -Pandroid.testInstrumentationRunnerArguments.class=com.tjlabs.tjjupitervm_demo_android.MockModeTest
             -Pandroid.testInstrumentationRunnerArguments.sectorId=${{ matrix.sector_id }}
             -Pandroid.testInstrumentationRunnerArguments.userId=ci_vm_verify_user_${{ matrix.region }}
+            -Pandroid.testInstrumentationRunnerArguments.region=${{ matrix.region }}
             --stacktrace
 
       - name: Upload test reports

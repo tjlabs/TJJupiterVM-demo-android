@@ -27,7 +27,7 @@ class AuthInitTest {
         val authLatch = CountDownLatch(1)
         var authCode = -1
         var authSuccess = false
-        TJJupiterVMAuth.auth(application, accessKey, accessSecretKey) { code, success ->
+        TJJupiterVMAuth.auth(application, accessKey, accessSecretKey, args.region) { code, success ->
             authCode = code
             authSuccess = success
             authLatch.countDown()
