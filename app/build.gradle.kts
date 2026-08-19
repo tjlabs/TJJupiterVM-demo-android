@@ -39,7 +39,7 @@ android {
         minSdk = 26
         targetSdk = 34
         versionCode = 1
-        versionName = "1.0"
+        versionName = jupiterVmSdkVersion
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "AUTH_ACCESS_KEY", "\"${authAccessKey.toBuildConfigString()}\"")
@@ -55,6 +55,18 @@ android {
             )
         }
     }
+
+    // APK 파일명 규약: tjlabsvm-demo-android-<buildType>-<version>.apk
+    //   예) tjlabsvm-demo-android-debug-1.0.14.apk
+    //       tjlabsvm-demo-android-release-1.0.14.apk
+    applicationVariants.all {
+        val variant = this
+        outputs.all {
+            val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            output.outputFileName =
+                "tjlabsvm-demo-android-${variant.buildType.name}-${variant.versionName}.apk"
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -68,7 +80,9 @@ android {
 }
 
 dependencies {
-    implementation("com.github.tjlabs:TJJupiterVM-sdk-android:$jupiterVmSdkVersion")
+    // Local Maven 배포본 사용 (개발 · 검증용). 정식 릴리스 전 원복:
+    //   implementation("com.github.tjlabs:TJJupiterVM-sdk-android:$jupiterVmSdkVersion")
+    implementation("com.tjlabs:TJJupiterVM-sdk-android:$jupiterVmSdkVersion")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)
