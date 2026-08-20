@@ -140,7 +140,6 @@ class MainActivity : AppCompatActivity() {
             selectedParkingIdText.text = parkingId
             parkingSelectionOverlay.visibility = View.VISIBLE
         }
-
         vmDelegate = object : TJJupiterVMView.TJJupiterVMViewDelegate {
             override fun didWebViewRemoved() {
                 Toast.makeText(this@MainActivity, "web view is removed", Toast.LENGTH_SHORT).show()
