@@ -5,7 +5,7 @@
 TJJupiterVM-demo-android is a minimal Android sample app for integrating **TJLabs Jupiter VM SDK (JitPack)**.
 
 <!-- JUPITER_VM_SDK_VERSION_START -->
-Jupiter VM SDK version: 1.0.15
+Jupiter VM SDK version: 1.0.16
 <!-- JUPITER_VM_SDK_VERSION_END -->
 
 The app demonstrates a simple VM service lifecycle with:
