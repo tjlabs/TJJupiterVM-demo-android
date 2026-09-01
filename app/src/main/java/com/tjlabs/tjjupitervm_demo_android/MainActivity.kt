@@ -31,7 +31,6 @@ import com.tjlabs.tjlabsjupiter_sdk_android.api.JupiterResult
 class MainActivity : AppCompatActivity() {
     companion object {
         private const val PERMISSION_REQUEST_CODE = 1001
-        private const val PARKING_LEVEL_ID = 52 //example id
         private const val DEFAULT_SECTOR_ID = 20
 
         // Hardcoded sector 목록 (tenant/me/sectors API 대체).
@@ -66,19 +65,6 @@ class MainActivity : AppCompatActivity() {
     private var isDevEnv: Boolean = false
     private var isViewOpen = false
     private var pendingAutoAuth = false
-
-    private val initParkingLocationIds = listOf("OB-rhaj0t4ctwzb4491")
-
-    private val initOccupiedParkingLocations = mapOf(
-        "OB-1h7zbmxfa10z93809" to TJJupiterVMModel.ParkingLocationState.OCCUPIED,
-        "OB-1h84se62jidlw3811" to TJJupiterVMModel.ParkingLocationState.OCCUPIED
-    )
-
-    private val updatedOccupiedParkingLocations = mapOf(
-        "OB-1h82101id68tx3548" to TJJupiterVMModel.ParkingLocationState.OCCUPIED,
-        "OB-1h7zbmxfa10z93809" to TJJupiterVMModel.ParkingLocationState.OCCUPIED,
-        "OB-1h84se62jidlw3811" to TJJupiterVMModel.ParkingLocationState.OCCUPIED
-    )
 
     private lateinit var vmnaviView: TJJupiterVMView
     private lateinit var vmDelegate: TJJupiterVMView.TJJupiterVMViewDelegate
@@ -162,13 +148,24 @@ class MainActivity : AppCompatActivity() {
                 isSdkInitCompleted = isSuccess
                 if (isSuccess) {
                     Toast.makeText(this@MainActivity, "SDK init 성공", Toast.LENGTH_SHORT).show()
-                    vmnaviView.setParkingLocationStates(
-                        mapOf(PARKING_LEVEL_ID to initOccupiedParkingLocations)
-                    )
-
-                    vmnaviView.setSavedParkingLocations(
-                        mapOf(PARKING_LEVEL_ID to initParkingLocationIds)
-                    )
+                    val preset = ParkingPresets.forSector(selectedSectorId)
+                    if (preset != null) {
+                        if (preset.initialStates.isNotEmpty()) {
+                            vmnaviView.setParkingLocationStates(
+                                mapOf(preset.levelId to preset.initialStates)
+                            )
+                        }
+                        if (preset.savedMatchingIds.isNotEmpty()) {
+                            vmnaviView.setSavedParkingLocations(
+                                mapOf(preset.levelId to preset.savedMatchingIds)
+                            )
+                        }
+                    } else {
+                        Log.d(
+                            "CheckVMNavi",
+                            "sector=$selectedSectorId 의 파킹 프리셋 없음 — set*ParkingLocation* skip (ParkingPresets.kt 참고)"
+                        )
+                    }
                     if (pendingStartAll) {
                         runStartAndShow(vmnaviContainer, switchSetMockMode.isChecked)
                     }
@@ -206,12 +203,13 @@ class MainActivity : AppCompatActivity() {
         buttonParkingSheetClose.setOnClickListener { hideParkingSheet() }
         buttonParkingSheetConfirm.setOnClickListener {
             val parkingId = pendingParkingSpaceId
-            if (parkingId.isNullOrBlank()) {
+            val levelId = pendingParkingSpaceLevelId
+            if (parkingId.isNullOrBlank() || levelId == null) {
                 Toast.makeText(this, "선택된 주차면 ID가 없습니다", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
-            vmnaviView.updateSavedParkingLocations(mapOf(PARKING_LEVEL_ID to listOf(parkingId)))
+            vmnaviView.updateSavedParkingLocations(mapOf(levelId to listOf(parkingId)))
 
             Toast.makeText(this, "주차 위치 저장 요청: $parkingId", Toast.LENGTH_SHORT).show()
             hideParkingSheet()
@@ -269,8 +267,17 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            vmnaviView.updateParkingLocationStates(mapOf(PARKING_LEVEL_ID to updatedOccupiedParkingLocations))
-            Toast.makeText(this, "점유 주차면 3개 업데이트 전송", Toast.LENGTH_SHORT).show()
+            val preset = ParkingPresets.forSector(selectedSectorId)
+            if (preset == null || preset.updateStates.isEmpty()) {
+                Toast.makeText(
+                    this,
+                    "sector=$selectedSectorId 의 update 프리셋이 없습니다 (ParkingPresets.kt 확인)",
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@setOnClickListener
+            }
+            vmnaviView.updateParkingLocationStates(mapOf(preset.levelId to preset.updateStates))
+            Toast.makeText(this, "점유 주차면 ${preset.updateStates.size}개 업데이트 전송", Toast.LENGTH_SHORT).show()
         }
 
         switchSetMockMode.setOnCheckedChangeListener { _, isChecked ->
