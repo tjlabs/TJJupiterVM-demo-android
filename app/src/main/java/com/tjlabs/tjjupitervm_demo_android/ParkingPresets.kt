@@ -15,7 +15,8 @@ import com.tjlabs.tjjupitervm_sdk_android.TJJupiterVMModel.ParkingLocationState
 object ParkingPresets {
 
     data class Entry(
-        val levelId: Int,
+        /** 사용자 표기 층(level_match, 예: "1"). SDK 내부에서 levelId 로 변환된다. */
+        val levelId: String,
         /** SDK init 완료 직후 setParkingLocationStates 로 전달할 초기 상태. */
         val initialStates: Map<String, ParkingLocationState> = emptyMap(),
         /** SDK init 완료 직후 setSavedParkingLocations 로 전달할 저장 목록. */
@@ -32,7 +33,7 @@ object ParkingPresets {
      */
     private val bySectorId: Map<Int, Entry> = mapOf(
         111 to Entry(
-            levelId = 128,
+            levelId = "1",
             initialStates = mapOf(
                 "642491532" to ParkingLocationState.OCCUPIED,
             ),
@@ -44,7 +45,7 @@ object ParkingPresets {
             ),
         ),
         112 to Entry(
-            levelId = 134,
+            levelId = "1",
             initialStates = mapOf(
                 "1102" to ParkingLocationState.OCCUPIED,
             ),
