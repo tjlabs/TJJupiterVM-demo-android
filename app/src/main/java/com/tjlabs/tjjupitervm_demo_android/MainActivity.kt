@@ -55,7 +55,7 @@ class MainActivity : AppCompatActivity() {
     private var isAuthCompleted = false
     private var pendingStartAll = false
     private var pendingParkingSpaceId: String? = null
-    private var pendingParkingSpaceLevelId: Int? = null
+    private var pendingParkingSpaceLevelId: String? = null
     private var selectedMockMode: JupiterMockMode = JupiterMockMode.VEHICLE_OUTDOOR_PARKING
     private var sectorOptions: List<TenantSectorSummary> = HARDCODED_SECTORS
     private var selectedSectorId: Int = DEFAULT_SECTOR_ID
@@ -120,7 +120,7 @@ class MainActivity : AppCompatActivity() {
             parkingSelectionOverlay.visibility = View.GONE
         }
 
-        val showParkingSheet: (Int, String) -> Unit = { levelId, parkingId ->
+        val showParkingSheet: (String, String) -> Unit = { levelId, parkingId ->
             pendingParkingSpaceLevelId = levelId
             pendingParkingSpaceId = parkingId
             selectedParkingIdText.text = parkingId
@@ -135,7 +135,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun isParkingLocationTapped(
-                levelId: Int,
+                levelId: String,
                 parkingLocationId: String
             ) {
                 Log.d("CheckVMNavi", "[AllProcess] isParkingLocationTapped id=$parkingLocationId // level ID : $levelId")
@@ -204,7 +204,7 @@ class MainActivity : AppCompatActivity() {
         buttonParkingSheetConfirm.setOnClickListener {
             val parkingId = pendingParkingSpaceId
             val levelId = pendingParkingSpaceLevelId
-            if (parkingId.isNullOrBlank() || levelId == null) {
+            if (parkingId.isNullOrBlank() || levelId.isNullOrBlank()) {
                 Toast.makeText(this, "선택된 주차면 ID가 없습니다", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }

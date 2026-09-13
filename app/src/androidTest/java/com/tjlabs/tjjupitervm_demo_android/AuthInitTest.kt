@@ -61,7 +61,7 @@ class AuthInitTest {
 
                 override fun didWebViewRemoved() = Unit
                 override fun isEnteringWardDetected(wardInfo: TJJupiterVMModel.EnteringInfo) = Unit
-                override fun isParkingLocationTapped(levelId: Int, parkingLocationId: String) = Unit
+                override fun isParkingLocationTapped(levelId: String, parkingLocationId: String) = Unit
             }
 
             scenario.onActivity { activity ->
