@@ -123,9 +123,11 @@ class MockModeTest {
 
             scenario.onActivity { activity ->
                 waitForWebView.set(true)
-                activity.vmView.setMockMode(mockMode)
-                activity.vmView.startService(UserMode.MODE_VEHICLE)
-                activity.vmView.configureFrame(activity.container)
+                // VM SDK 1.0.23 (iOS 2.0.37 parity, TJ-609): setMockMode · startService ·
+                // configureFrame 모두 sectorId required. 이 테스트에서 로드한 sectorId 전달.
+                activity.vmView.setMockMode(mockMode, sectorId)
+                activity.vmView.startService(UserMode.MODE_VEHICLE, sectorId)
+                activity.vmView.configureFrame(activity.container, sectorId)
                 assertTrue("vm view not attached to container ($label)", activity.vmView.parent === activity.container)
             }
 

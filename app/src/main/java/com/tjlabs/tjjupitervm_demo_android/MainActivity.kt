@@ -234,11 +234,13 @@ class MainActivity : AppCompatActivity() {
             }
 
 
+            // VM SDK 1.0.23 (iOS 2.0.37 parity, TJ-609): setMockMode · startService · configureFrame
+            // 모두 sectorId required. 현재 선택된 섹터를 전달한다.
             if (switchSetMockMode.isChecked) {
-                vmnaviView.setMockMode(selectedMockMode)
+                vmnaviView.setMockMode(selectedMockMode, selectedSectorId)
             }
 
-            vmnaviView.startService(UserMode.MODE_VEHICLE)
+            vmnaviView.startService(UserMode.MODE_VEHICLE, selectedSectorId)
         }
 
         val buttonToggleView = findViewById<Button>(R.id.buttonToggleView)
@@ -493,16 +495,17 @@ class MainActivity : AppCompatActivity() {
 
     private fun runStartAndShow(vmnaviContainer: FrameLayout, applyMockMode: Boolean) {
         if (applyMockMode) {
-            vmnaviView.setMockMode(selectedMockMode)
+            vmnaviView.setMockMode(selectedMockMode, selectedSectorId)
         }
-        vmnaviView.startService(UserMode.MODE_VEHICLE)
+        vmnaviView.startService(UserMode.MODE_VEHICLE, selectedSectorId)
         openView(vmnaviContainer, findViewById(R.id.buttonToggleView))
         pendingStartAll = false
     }
 
     private fun openView(container: FrameLayout, toggleButton: Button) {
         container.visibility = View.VISIBLE
-        vmnaviView.configureFrame(container)
+        // VM SDK 1.0.23 (iOS 2.0.37 parity, TJ-609): configureFrame 섹터 required.
+        vmnaviView.configureFrame(container, selectedSectorId)
         isViewOpen = true
         toggleButton.text = "뷰 닫기"
     }
