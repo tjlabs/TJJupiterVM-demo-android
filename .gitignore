@@ -26,3 +26,6 @@ local.properties
 # Optional captured outputs
 captures/
 /app/libs
+
+# APK + baseline-profile artifacts emitted by assembleRelease (local-only)
+/app/release/
