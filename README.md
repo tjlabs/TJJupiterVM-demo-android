@@ -5,7 +5,7 @@
 TJJupiterVM-demo-android is a minimal Android sample app for integrating **TJLabs Jupiter VM SDK** with Kotlin.
 
 <!-- JUPITER_VM_SDK_VERSION_START -->
-Jupiter VM SDK (JitPack): com.github.tjlabs:TJJupiterVM-sdk-android 1.0.24
+Jupiter VM SDK version: 1.0.24
 <!-- JUPITER_VM_SDK_VERSION_END -->
 
 The app demonstrates the VM SDK lifecycle step by step:
@@ -299,3 +299,15 @@ override fun isParkingLocationTapped(levelId: String, parkingLocationId: String)
 ## License
 
 TJJupiterVM SDK is proprietary software provided by TJLabs under a separate commercial license agreement.
+
+
+<!-- APP_DEPENDENCIES_START -->
+dependencies {
+    implementation("com.github.tjlabs:TJJupiterVM-sdk-android:$jupiterVmSdkVersion")
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.material)
+    implementation(libs.androidx.activity)
+    implementation(libs.androidx.constraintlayout)
+}
+<!-- APP_DEPENDENCIES_END -->
