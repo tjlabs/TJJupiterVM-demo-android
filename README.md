@@ -5,7 +5,7 @@
 TJJupiterVM-demo-android is a minimal Android sample app for integrating **TJLabs Jupiter VM SDK (JitPack)**.
 
 <!-- JUPITER_VM_SDK_VERSION_START -->
-Jupiter VM SDK version: 1.0.20
+Jupiter VM SDK version: 1.0.23
 <!-- JUPITER_VM_SDK_VERSION_END -->
 
 The app demonstrates a simple VM service lifecycle with:
@@ -181,28 +181,36 @@ vmnaviView.initialize(
 
 ### 4. Start service
 
+**1.0.23 breaking change** — `sectorId` is required on `startService(...)`,
+`setMockMode(...)`, and `configureFrame(...)`. The pre-1.0.23 overloads without
+`sectorId` have been removed (`configureFrame`) or marked deprecated (`startService`,
+`setMockMode`) per iOS 2.0.37 parity (TJ-609). The sector must be one of the sectors
+loaded in `initialize(...)` or `JupiterErrorCode.INVALID_SECTOR` is returned.
+
 Input:
 - `mode: UserMode` (this demo uses `UserMode.MODE_VEHICLE`)
+- `sectorId: Int`
 
 Output:
 - `onJupiterSuccess(isSuccess, code)`
 - `onJupiterResult(result)`
 
 ```kotlin
-vmnaviView.startService(UserMode.MODE_VEHICLE)
+vmnaviView.startService(UserMode.MODE_VEHICLE, sectorId)
 ```
 
-Optional mock mode before `startService`:
+Optional mock mode before `startService` — mock timeline is sector-scoped and must
+match the start sector:
 
 ```kotlin
-vmnaviView.setMockMode(selectedMockMode)
+vmnaviView.setMockMode(selectedMockMode, sectorId)
 ```
 
 ### 5. Show / close VM view
 
 ```kotlin
-vmnaviView.configureFrame(vmnaviContainer) // show
-vmnaviView.closeFrame()                     // close
+vmnaviView.configureFrame(vmnaviContainer, sectorId) // show
+vmnaviView.closeFrame()                              // close
 ```
 
 ### 6. Stop service
@@ -382,6 +390,7 @@ data class EnteringInfo(
 | `PERMISSION_DENIED` | `11` | Required permission denied |
 | `SIMULATION_DATA_LOAD_FAIL` | `12` | Simulation data load failed |
 | `GENERATOR_PRECHECK_FAIL` | `13` | Generator precheck failed |
+| `INVALID_SECTOR` | `14` | `startService` / `setMockMode` sector was not loaded in `initialize(...)` (1.0.23+, iOS 2.0.37 parity) |
 
 ### VMErrorCode (`TJJupiterVMModel.VMErrorCode`)
 
@@ -397,6 +406,31 @@ data class EnteringInfo(
 | `VACANT` | `0` | Vacant parking space |
 | `OCCUPIED` | `1` | Occupied parking space |
 
+
+## 1.0.23 Notes
+
+Breaking changes (iOS 2.0.37 parity, TJ-609):
+
+- `configureFrame(container)` → `configureFrame(container, sectorId)` — the no-sector
+  overload has been removed. `sectorId` must match the sector loaded in `initialize(...)`.
+- `startService(mode)` → `startService(mode, sectorId)` — the no-sector overload is now
+  deprecated (will be removed next major) and warns if called.
+- `setMockMode(mode)` → `setMockMode(mode, sectorId)` — mock timeline is sector-scoped;
+  the overload without `sectorId` is deprecated.
+- New `JupiterErrorCode.INVALID_SECTOR` (`= 14`) fires when a start/mock/configure
+  call references a sector that was not loaded in `initialize(...)`.
+
+New capability (opt-in):
+
+- Multi-sector initialize is exposed via the underlying Jupiter SDK 2.0.37 — a host
+  can load several sectors in one combined bundle and switch active sector by passing
+  a different `sectorId` to `startService(...)` / `configureFrame(...)` without
+  re-initializing.
+
+Underlying Jupiter SDK bump: **2.0.36 → 2.0.37**. Position-tracking fixes shipped with
+this bundle: LSE `trace_id` live read, polygon geofence consumption restored in
+`BuildingLevelChanger`, DR misentry re-anchoring, session reset `curUvd` leak sealed.
+See the Jupiter SDK CHANGELOG for details.
 
 ## License
 
