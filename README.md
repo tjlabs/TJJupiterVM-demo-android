@@ -2,28 +2,32 @@
 
 ## Overview
 
-TJJupiterVM-demo-android is a minimal Android sample app for integrating **TJLabs Jupiter VM SDK (JitPack)**.
+TJJupiterVM-demo-android is a minimal Android sample app for integrating **TJLabs Jupiter VM SDK** with Kotlin.
 
 <!-- JUPITER_VM_SDK_VERSION_START -->
-Jupiter VM SDK version: 1.0.23
+Jupiter VM SDK (JitPack): com.github.tjlabs:TJJupiterVM-sdk-android 1.0.24
 <!-- JUPITER_VM_SDK_VERSION_END -->
 
-The app demonstrates a simple VM service lifecycle with:
-- Authentication (`AUTH`)
-- Service initialize (`SDK Init`)
-- Service start (`SDK Start`)
-- View attach/detach (`뷰 보기` / `뷰 종료`)
-- Service stop (`SDK 종료`)
-- Parking location APIs (`setSavedParkingLocations`, `updateSavedParkingLocations`, `setVacantParkingLocationStates`, `updateVacantParkingLocationStates`)
-- Optional mock mode before service start (`setMockMode`)
+The app demonstrates the VM SDK lifecycle step by step:
+- Server configuration (`auth(region: ...)` / `authForDevelopment(region: ...)`)
+- Authentication (`auth`)
+- Service initialize (`initialize`)
+- Mock mode apply (`setMockMode`)
+- VM frame attach (`configureFrame`)
+- VM frame detach (`closeFrame`)
+- Service start (`startService`)
+- Service stop (`stopService`)
+- Parking location APIs (`setSavedParkingLocations`, `updateSavedParkingLocations`, `setParkingLocationStates`, `updateParkingLocationStates`)
 
 ## Features
 
-- VM SDK auth/init/start/stop flow example
-- WebView frame attach/detach flow
-- Runtime permission request flow
+- Permission check and auth flow on launch
+- Step-by-step lifecycle controls for `initialize`, `setMockMode`, `configureFrame`, `closeFrame`, `startService`, and `stopService`
+- WebView-based VM frame attach/detach flow
+- Runtime location and Bluetooth permission request flow
+- Mock Mode selector for switching VM scenarios after initialization
 - Parking-space tap callback handling
-- Hardcoded vacant parking update button (`빈주차 업데이트`)
+- Hardcoded saved parking / parking-state example after initialization
 
 ## Requirements
 
@@ -56,7 +60,6 @@ pluginManagement {
     repositories {
         google()
         mavenCentral()
-        mavenLocal()
         gradlePluginPortal()
     }
 }
@@ -65,34 +68,30 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
-        mavenLocal()
         mavenCentral()
         maven("https://jitpack.io")
     }
 }
 ```
 
-### 2. Add dependencies
+### 2. Add dependency
 
 ```kotlin
 // app/build.gradle.kts
-<!-- APP_DEPENDENCIES_START -->
 dependencies {
     implementation("com.github.tjlabs:TJJupiterVM-sdk-android:$jupiterVmSdkVersion")
-    implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.appcompat)
-    implementation(libs.material)
-    implementation(libs.androidx.activity)
-    implementation(libs.androidx.constraintlayout)
 }
-<!-- APP_DEPENDENCIES_END -->
 ```
+
+### 3. Open project
+
+Open the project root in Android Studio and let Gradle sync.
 
 ## Quick Guide
 
 ### 1. Configure credentials
 
-Set in `local.properties`:
+Set your issued credentials in `local.properties`:
 
 ```properties
 sdk.dir=/Users/your_name/Library/Android/sdk
@@ -100,129 +99,163 @@ AUTH_ACCESS_KEY=YOUR_ACCESS_KEY
 AUTH_SECRET_ACCESS_KEY=YOUR_SECRET_ACCESS_KEY
 ```
 
-### 2. Authenticate
-
 Input:
 - `accessKey: String`
 - `accessSecretKey: String`
-- `region: TJJupiterVMRegion` (optional, default: `TJJupiterVMRegion.SAUDI`)
 
 Output:
 - callback `(code: Int, success: Boolean)`
 
+Optionally choose the service `region` **on** the `auth` call. Skip it to use the default (`.SAUDI`). Use `authForDevelopment(...)` for internal DEV / QA; external apps must use `auth(...)` which targets PROD.
+
 ```kotlin
+// Default region is SAUDI (PROD).
 TJJupiterVMAuth.auth(
     application,
-    accessKey,
-    accessSecretKey,
+    accessKey = "YOUR_ACCESS_KEY",
+    secretAccessKey = "YOUR_SECRET_ACCESS_KEY",
     region = TJJupiterVMRegion.KOREA
 ) { code, success ->
     // handle auth result
 }
 ```
 
-Use production auth server with a specific region:
+Available regions: `TJJupiterVMRegion.KOREA`, `TJJupiterVMRegion.SAUDI`.
+
+### 2. Launch flow: permissions -> auth
 
 ```kotlin
-TJJupiterVMAuth.auth(
-    application,
-    accessKey,
-    accessSecretKey,
-    region = TJJupiterVMRegion.SAUDI
-) { code, success ->
-    // handle auth result
+override fun requestAuth() {
+    TJJupiterVMAuth.auth(
+        application,
+        accessKey = "YOUR_ACCESS_KEY",
+        secretAccessKey = "YOUR_SECRET_ACCESS_KEY",
+        region = TJJupiterVMRegion.KOREA
+    ) { code, success ->
+        // update UI state
+    }
 }
 ```
 
-Use development auth server:
+When the app launches:
+- Location and Bluetooth permissions are checked first.
+- After all required permissions are granted, auth runs automatically.
+- `initialize` becomes enabled only after auth succeeds.
 
-```kotlin
-TJJupiterVMAuth.authForDevelopment(
-    application,
-    accessKey,
-    accessSecretKey,
-    region = TJJupiterVMRegion.KOREA
-) { code, success ->
-    // handle auth result
-}
-```
+### 3. Step-by-step lifecycle test flow
 
-Available regions:
+After auth succeeds, the demo lets you test each stage separately.
 
-- `TJJupiterVMRegion.KOREA`
-- `TJJupiterVMRegion.SAUDI`
+1. Tap `initialize`
+2. Optionally choose a scenario from `Mock Mode`
+3. Tap `configureFrame` if you want to attach the VM web frame to the on-screen container
+4. Tap `startService`
+5. Tap `stopService`
+6. Tap `closeFrame` when you want to detach the frame
 
-Notes:
-- `auth(...)` uses **PROD** environment.
-- `authForDevelopment(...)` uses **DEV** environment for internal development / QA.
-- Region is not set separately. Pass it directly to `auth(...)` or `authForDevelopment(...)`.
+`configureFrame` / `closeFrame` and `startService` / `stopService` are intentionally separated so you can verify frame lifecycle and service lifecycle independently.
 
-### 3. Set delegate + initialize service
+This demo uses multiple sectors:
+- `initialize` can load several sectors at once (e.g. `111`, `112`).
+- `configureFrame`, `startService`, and `setMockMode` use the **Active Sector** field on the screen.
+- To switch sectors, tap `stopService` and `closeFrame`, change the Active Sector, then tap `configureFrame` / `startService` again. No re-initialization is needed.
+- `configureFrame` and `startService` must use the same sector. A different sector fails with `INVALID_SECTOR` (see the SDK README for the rules).
+
+### 4. Initialize service
 
 Input:
 - `application: Application`
 - `userId: String`
-- `sectorId: Int`
+- `sectorIds: List<Int>` (or `sectorId: Int` for a single sector)
 
 Output:
 - `onInitSuccess(isSuccess, code)`
 
 ```kotlin
 vmnaviView.setDelegate(delegate)
-```
-
-```kotlin
 vmnaviView.initialize(
     application,
-    userId,
-    sectorId
+    userId = "vm-test",
+    sectorIds = listOf(111, 112)
 )
 ```
 
-### 4. Start service
+Behavior in this demo:
+- `initialize` is enabled after successful auth and can be called again when not in progress
+- On successful initialization, sample saved parking and parking-state data are applied
 
-**1.0.23 breaking change** — `sectorId` is required on `startService(...)`,
-`setMockMode(...)`, and `configureFrame(...)`. The pre-1.0.23 overloads without
-`sectorId` have been removed (`configureFrame`) or marked deprecated (`startService`,
-`setMockMode`) per iOS 2.0.37 parity (TJ-609). The sector must be one of the sectors
-loaded in `initialize(...)` or `JupiterErrorCode.INVALID_SECTOR` is returned.
+### 5. Apply Mock Mode
 
 Input:
-- `mode: UserMode` (this demo uses `UserMode.MODE_VEHICLE`)
+- `mode: JupiterMockMode`
+- `sectorId: Int`
+
+```kotlin
+vmnaviView.setMockMode(JupiterMockMode.VEHICLE_OUTDOOR_PARKING, sectorId)
+```
+
+Behavior in this demo:
+- `Mock Mode` becomes available after `initialize`
+- Mock sector must match the sector you later `configureFrame` / `startService` with
+- Available options: `VEHICLE_INDOOR_OUTDOOR`, `VEHICLE_OUTDOOR_PARKING`, `PEDESTRIAN_INDOOR_PARKING`, `PEDESTRIAN_PARKING_INDOOR`, `NONE` (disable)
+
+### 6. Zoom level (optional)
+
+Set WebView zoom range **before** `configureFrame`. Returns `false` without mutating state if validation fails:
+
+```kotlin
+val ok = vmnaviView.setZoomLevels(min = 17f, default = 19f, max = 20f)
+```
+
+Validation:
+- `min >= 0`, `default >= min`, `max >= default + 0.5`, `max <= 24`
+
+Omit this call to let the server-provided `default_position.zoom_level` from the sector bundle drive the WebView zoom range.
+
+### 7. Attach VM frame with `configureFrame`
+
+Input:
+- host `FrameLayout`
 - `sectorId: Int`
 
 Output:
-- `onJupiterSuccess(isSuccess, code)`
-- `onJupiterResult(result)`
+- `onWebViewSuccess(isSuccess, code)`
+- `didWebViewRemoved()`
+
+```kotlin
+vmnaviView.configureFrame(vmnaviContainer, sectorId)
+```
+
+Behavior in this demo:
+- `configureFrame` attaches the VM frame to the dedicated container view
+- `closeFrame` removes the attached frame
+- Frame attach/detach does not automatically start or stop the service
+
+### 8. Start and stop service
 
 ```kotlin
 vmnaviView.startService(UserMode.MODE_VEHICLE, sectorId)
-```
 
-Optional mock mode before `startService` — mock timeline is sector-scoped and must
-match the start sector:
-
-```kotlin
-vmnaviView.setMockMode(selectedMockMode, sectorId)
-```
-
-### 5. Show / close VM view
-
-```kotlin
-vmnaviView.configureFrame(vmnaviContainer, sectorId) // show
-vmnaviView.closeFrame()                              // close
-```
-
-### 6. Stop service
-
-```kotlin
 vmnaviView.stopService()
 vmnaviView.closeFrame()
 ```
 
-### 7. Parking APIs in this demo
+Behavior in this demo:
+- `startService` is triggered explicitly by the button
+- `stopService` is also triggered explicitly and updates button state in its completion
+- Service start/stop is documented separately from frame attach/detach so each SDK step can be tested on its own
 
-Initialize parking states after init success:
+### 9. Parking APIs in this demo
+
+Saved parking example:
+
+```kotlin
+vmnaviView.setSavedParkingLocations(
+    mapOf(PARKING_LEVEL_ID to initParkingLocationIds)
+)
+```
+
+Parking-state example:
 
 ```kotlin
 vmnaviView.setParkingLocationStates(
@@ -233,9 +266,18 @@ vmnaviView.setParkingLocationStates(
         )
     )
 )
-vmnaviView.setSavedParkingLocations(
-    mapOf(PARKING_LEVEL_ID to initParkingLocationIds)
+```
+
+Update parking-state example:
+
+```kotlin
+val parkingLevelId = 52
+val updates = mapOf(
+    "OB-1h82101id68tx3548" to TJJupiterVMModel.ParkingLocationState.OCCUPIED,
+    "OB-1h7zbmxfa10z93809" to TJJupiterVMModel.ParkingLocationState.OCCUPIED,
+    "OB-1h84se62jidlw3811" to TJJupiterVMModel.ParkingLocationState.OCCUPIED
 )
+vmnaviView.updateParkingLocationStates(mapOf(parkingLevelId to updates))
 ```
 
 Save selected parking location:
@@ -246,191 +288,13 @@ vmnaviView.updateSavedParkingLocations(
 )
 ```
 
-Occupied parking update example (hardcoded button):
+Parking-space tap handling (in delegate):
 
 ```kotlin
-val parkingLevelId = 52
-val updatedOccupiedParkingLocations = mapOf(
-    "OB-1h82101id68tx3548" to TJJupiterVMModel.ParkingLocationState.OCCUPIED,
-    "OB-1h7zbmxfa10z93809" to TJJupiterVMModel.ParkingLocationState.OCCUPIED,
-    "OB-1h84se62jidlw3811" to TJJupiterVMModel.ParkingLocationState.OCCUPIED
-)
-vmnaviView.updateParkingLocationStates(
-    mapOf(parkingLevelId to updatedOccupiedParkingLocations)
-)
-```
-
-Tap callback signature in current SDK:
-
-```kotlin
-override fun isParkingLocationTapped(levelId: Int, parkingLocationId: String)
-```
-
-## Delegate
-
-```kotlin
-vmnaviView.setDelegate(object : TJJupiterVMView.TJJupiterVMViewDelegate {
-    override fun onInitSuccess(
-        isSuccess: Boolean,
-        code: InitErrorCode?
-    ) {}
-
-    override fun onJupiterSuccess(
-        isSuccess: Boolean,
-        code: JupiterErrorCode?
-    ) {}
-
-    override fun onJupiterResult(result:JupiterResult) {}
-
-    override fun onWebViewSuccess(
-        isSuccess: Boolean,
-        code: TJJupiterVMModel.VMErrorCode?
-    ) {}
-
-    override fun didWebViewRemoved() {}
-
-    override fun isEnteringWardDetected(wardInfo: TJJupiterVMModel.EnteringInfo) {}
-
-    override fun isParkingLocationTapped(levelId: Int, parkingLocationId: String) {}
-})
-```
-
-Current callback signatures in SDK:
-
-```kotlin
-interface TJJupiterVMViewDelegate {
-    fun onInitSuccess(isSuccess: Boolean, code: JupiterInitErrorCode? = null)
-    fun onJupiterSuccess(isSuccess: Boolean, code: JupiterSdkErrorCode? = null)
-    fun onJupiterResult(result: JupiterResult)
-    fun onWebViewSuccess(isSuccess: Boolean, code: TJJupiterVMModel.VMErrorCode? = null)
-    fun didWebViewRemoved()
-    fun isEnteringWardDetected(wardInfo: TJJupiterVMModel.EnteringInfo)
-    fun isParkingLocationTapped(levelId: Int, parkingLocationId: String)
+override fun isParkingLocationTapped(levelId: String, parkingLocationId: String) {
+    // handle tap
 }
 ```
-
-## Position Result
-
-### JupiterResult
-
-```kotlin
-data class JupiterResult(
-    val mobile_time: Long,
-    val index: Int,
-    val building_name: String,
-    val level_name: String,
-    val jupiter_pos: PositionRequest,
-    val navi_pos: PositionRequest?,
-    val llh: LLH?,
-    val velocity: Float,
-    val is_vehicle: Boolean,
-    val is_indoor: Boolean,
-    val validity_flag: Int,
-    val remain_distance : Int? = null
-)
-```
-
-### Position
-
-```kotlin
-data class Position(
-    val x: Int,
-    val y: Int,
-    val heading: Int
-)
-```
-
-### LLH
-
-```kotlin
-data class LLH(
-    val lat: Double,
-    val lon: Double,
-    val azimuth: Double
-)
-```
-
-### EnteringInfo
-
-```kotlin
-data class EnteringInfo(
-    val id: Int,
-    val number: Int,
-    val name: String
-)
-```
-
-## Core Enums
-
-### InitErrorCode
-
-| Name | Value | Description |
-| --- | --- | --- |
-| `NOT_AUTHORIZED` | `0` | Not authorized |
-| `INVALID_ID` | `1` | Invalid ID (blank or includes unsupported characters) |
-| `NETWORK_DISCONNECT` | `2` | Network disconnected |
-| `LOGIN_FAIL` | `3` | Login/authentication failed |
-| `LOAD_RESOURCE_FAIL` | `4` | Resource loading / calc init failed |
-
-### JupiterErrorCode
-
-| Name | Value | Description |
-| --- | --- | --- |
-| `NOT_INITIALIZED` | `0` | Service is not initialized |
-| `DUPLICATED_SERVICE` | `1` | Service already running |
-| `GENERATOR_FAIL` | `2` | Generator failed |
-| `INVALID_ID` | `3` | Invalid ID |
-| `INVALID_MODE` | `4` | Invalid mode |
-| `NETWORK_DISCONNECT` | `5` | Network disconnected |
-| `LOGIN_FAIL` | `6` | Login/authentication failed |
-| `CALC_INIT_FAIL` | `7` | Calc manager initialization failed |
-| `BLUETOOTH_OFF` | `8` | Bluetooth is off |
-| `BLUETOOTH_UNAVAILABLE` | `9` | Bluetooth unavailable on device |
-| `BLE_SCAN_STOP` | `10` | BLE scan stopped |
-| `PERMISSION_DENIED` | `11` | Required permission denied |
-| `SIMULATION_DATA_LOAD_FAIL` | `12` | Simulation data load failed |
-| `GENERATOR_PRECHECK_FAIL` | `13` | Generator precheck failed |
-| `INVALID_SECTOR` | `14` | `startService` / `setMockMode` sector was not loaded in `initialize(...)` (1.0.23+, iOS 2.0.37 parity) |
-
-### VMErrorCode (`TJJupiterVMModel.VMErrorCode`)
-
-| Name | Value | Description |
-| --- | --- | --- |
-| `UNKNOWN` | `-1` | Unknown error |
-| `VM_VIEW_FAIL` | `0` | WebView/VM view initialization failed |
-
-### ParkingLocationState (`TJJupiterVMModel.ParkingLocationState`)
-
-| Name | Value | Description |
-| --- | --- | --- |
-| `VACANT` | `0` | Vacant parking space |
-| `OCCUPIED` | `1` | Occupied parking space |
-
-
-## 1.0.23 Notes
-
-Breaking changes (iOS 2.0.37 parity, TJ-609):
-
-- `configureFrame(container)` → `configureFrame(container, sectorId)` — the no-sector
-  overload has been removed. `sectorId` must match the sector loaded in `initialize(...)`.
-- `startService(mode)` → `startService(mode, sectorId)` — the no-sector overload is now
-  deprecated (will be removed next major) and warns if called.
-- `setMockMode(mode)` → `setMockMode(mode, sectorId)` — mock timeline is sector-scoped;
-  the overload without `sectorId` is deprecated.
-- New `JupiterErrorCode.INVALID_SECTOR` (`= 14`) fires when a start/mock/configure
-  call references a sector that was not loaded in `initialize(...)`.
-
-New capability (opt-in):
-
-- Multi-sector initialize is exposed via the underlying Jupiter SDK 2.0.37 — a host
-  can load several sectors in one combined bundle and switch active sector by passing
-  a different `sectorId` to `startService(...)` / `configureFrame(...)` without
-  re-initializing.
-
-Underlying Jupiter SDK bump: **2.0.36 → 2.0.37**. Position-tracking fixes shipped with
-this bundle: LSE `trace_id` live read, polygon geofence consumption restored in
-`BuildingLevelChanger`, DR misentry re-anchoring, session reset `curUvd` leak sealed.
-See the Jupiter SDK CHANGELOG for details.
 
 ## License
 
