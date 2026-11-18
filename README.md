@@ -5,8 +5,13 @@
 TJJupiterVM-demo-android is a minimal Android sample app for integrating **TJLabs Jupiter VM SDK** with Kotlin.
 
 <!-- JUPITER_VM_SDK_VERSION_START -->
-Jupiter VM SDK (JitPack): com.github.tjlabs:TJJupiterVM-sdk-android 1.0.24
+Jupiter VM SDK version: 1.0.25-hotfix.1
 <!-- JUPITER_VM_SDK_VERSION_END -->
+
+> **Hotfix 1.0.25-hotfix.1** — 1.0.25 사용 앱(사우디 상용)을 위한 핫픽스. 의존: Jupiter SDK `2.0.40-hotfix.1` (VM 이 함께 가져옴).
+> - 멀티 섹터 `initialize(sectorIds)` 후 목록의 마지막이 아닌 섹터로 시작하면 `currentPosition` 층이 다른 섹터 값으로 나가 지도에 위치가 표시되지 않던 문제(`VM_INVALID_LEVEL` 5323) 수정
+> - 멀티 섹터에서 첫 섹터가 아닌 섹터로 `startService` 시 측위가 되지 않던 문제 수정 (Jupiter)
+> - 보행자 경로 요청 시 LSE raw 위치 + OS heading 출력 (Jupiter)
 
 The app demonstrates the VM SDK lifecycle step by step:
 - Server configuration (`auth(region: ...)` / `authForDevelopment(region: ...)`)
@@ -82,6 +87,11 @@ dependencies {
     implementation("com.github.tjlabs:TJJupiterVM-sdk-android:$jupiterVmSdkVersion")
 }
 ```
+
+> **핫픽스 버전 사용 시 주의**
+> - 좌표는 `com.github.tjlabs:TJJupiterVM-sdk-android:1.0.25-hotfix.1` 입니다 (`com.tjlabs:…` 는 JitPack 에 없음).
+> - Jupiter SDK 는 따로 선언하지 않아도 `2.0.40-hotfix.1` 이 함께 들어옵니다. 앱에 `TJLabsJupiter-sdk-android:2.0.40` 을 따로 선언해 두면 Gradle 이 `2.0.40` 을 더 높은 버전으로 판단해 핫픽스가 빠지므로, 그 선언은 지우거나 `2.0.40-hotfix.1` 로 맞추세요.
+> - 확인: `./gradlew :app:dependencies --configuration releaseRuntimeClasspath | grep TJLabsJupiter-sdk-android` → `2.0.40-hotfix.1` (화살표 `-> 2.0.40` 가 보이면 위 문제)
 
 ### 3. Open project
 
@@ -299,3 +309,15 @@ override fun isParkingLocationTapped(levelId: String, parkingLocationId: String)
 ## License
 
 TJJupiterVM SDK is proprietary software provided by TJLabs under a separate commercial license agreement.
+
+
+<!-- APP_DEPENDENCIES_START -->
+dependencies {
+    implementation("com.github.tjlabs:TJJupiterVM-sdk-android:$jupiterVmSdkVersion")
+    implementation(libs.androidx.core.ktx)
+    implementation(libs.androidx.appcompat)
+    implementation(libs.material)
+    implementation(libs.androidx.activity)
+    implementation(libs.androidx.constraintlayout)
+}
+<!-- APP_DEPENDENCIES_END -->
