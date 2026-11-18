@@ -9,9 +9,6 @@ Jupiter VM SDK version: 1.0.25-hotfix.1
 <!-- JUPITER_VM_SDK_VERSION_END -->
 
 > **Hotfix 1.0.25-hotfix.1** — 1.0.25 사용 앱(사우디 상용)을 위한 핫픽스. 의존: Jupiter SDK `2.0.40-hotfix.1` (VM 이 함께 가져옴).
-> - 멀티 섹터 `initialize(sectorIds)` 후 목록의 마지막이 아닌 섹터로 시작하면 `currentPosition` 층이 다른 섹터 값으로 나가 지도에 위치가 표시되지 않던 문제(`VM_INVALID_LEVEL` 5323) 수정
-> - 멀티 섹터에서 첫 섹터가 아닌 섹터로 `startService` 시 측위가 되지 않던 문제 수정 (Jupiter)
-> - 보행자 경로 요청 시 LSE raw 위치 + OS heading 출력 (Jupiter)
 
 The app demonstrates the VM SDK lifecycle step by step:
 - Server configuration (`auth(region: ...)` / `authForDevelopment(region: ...)`)
