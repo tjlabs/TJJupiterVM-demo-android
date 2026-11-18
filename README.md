@@ -85,7 +85,6 @@ dependencies {
 }
 ```
 
-
 ### 3. Open project
 
 Open the project root in Android Studio and let Gradle sync.
