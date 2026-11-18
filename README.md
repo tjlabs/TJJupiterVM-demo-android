@@ -85,10 +85,6 @@ dependencies {
 }
 ```
 
-> **핫픽스 버전 사용 시 주의**
-> - 좌표는 `com.github.tjlabs:TJJupiterVM-sdk-android:1.0.25-hotfix.1` 입니다 (`com.tjlabs:…` 는 JitPack 에 없음).
-> - Jupiter SDK 는 따로 선언하지 않아도 `2.0.40-hotfix.1` 이 함께 들어옵니다. 앱에 `TJLabsJupiter-sdk-android:2.0.40` 을 따로 선언해 두면 Gradle 이 `2.0.40` 을 더 높은 버전으로 판단해 핫픽스가 빠지므로, 그 선언은 지우거나 `2.0.40-hotfix.1` 로 맞추세요.
-> - 확인: `./gradlew :app:dependencies --configuration releaseRuntimeClasspath | grep TJLabsJupiter-sdk-android` → `2.0.40-hotfix.1` (화살표 `-> 2.0.40` 가 보이면 위 문제)
 
 ### 3. Open project
 
