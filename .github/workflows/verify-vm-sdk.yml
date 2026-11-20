@@ -30,7 +30,7 @@ on:
           - ALL
 
 permissions:
-  contents: read
+  contents: write
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
@@ -208,8 +208,49 @@ jobs:
           path: app/build/reports/androidTests/connected/**
           if-no-files-found: ignore
 
-  notify:
+  bump:
+    # 사용자 2026-11-20: 배포된 VM SDK 버전으로 데모앱 release/<버전> 브랜치를 검증 성공 뒤 자동 생성
+    # (create-release-branch.yml 과 같은 bump). 핫픽스(X.Y.Z-suffix) 는 만들지 않음. 이미 있으면 그대로 둠.
     needs: [resolve-inputs, verify]
+    if: ${{ needs.verify.result == 'success' && !contains(needs.resolve-inputs.outputs.version, '-') }}
+    runs-on: ubuntu-latest
+    outputs:
+      branch: ${{ steps.push.outputs.branch }}
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Configure git
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      - name: Create release branch · bump · push
+        id: push
+        shell: bash
+        run: |
+          VERSION="${{ needs.resolve-inputs.outputs.version }}"
+          BRANCH="release/${VERSION}"
+          echo "branch=${BRANCH}" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code origin "refs/heads/${BRANCH}" >/dev/null 2>&1; then
+            echo "${BRANCH} 이미 있음 — 그대로 사용"
+            exit 0
+          fi
+          git checkout -b "${BRANCH}"
+          sed -i "s/^JUPITER_VM_SDK_VERSION=.*/JUPITER_VM_SDK_VERSION=${VERSION}/" gradle.properties
+          ./gradlew syncReadmeVersion
+          git add gradle.properties README.md
+          git commit -m "chore: bump VM SDK version to ${VERSION}" || echo "no changes"
+          git push -u origin "${BRANCH}"
+
+  notify:
+    needs: [resolve-inputs, verify, bump]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -235,8 +276,37 @@ jobs:
           )
           curl -X POST -H 'Content-type: application/json' --data "$payload" "$SLACK_WEBHOOK_URL"
 
+      - name: Share release notes (Slack, deploy bot → Leo)
+        # 사용자 2026-11-20: 데모앱 release 브랜치 생성 + 검증 성공 뒤 외부 공유 문구를 deploy bot(옛 client key alert bot)
+        # 채널에 Leo 멘션으로. 문구 = SDK 레포 release-on-merge 가 dispatch client_payload.share_b64 로 넘긴 PR 본문 share 구간.
+        # secrets.SLACK_CLIENT_SECRET_WEBHOOK_URL (SDK 레포와 같은 웹훅) 이 없거나 문구가 없으면 건너뜀. best-effort.
+        if: ${{ needs.verify.result == 'success' && needs.bump.result == 'success' }}
+        continue-on-error: true
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_RELEASE_SHARE_WEBHOOK_URL || secrets.SLACK_CLIENT_SECRET_WEBHOOK_URL }}
+          OWNER_ID: ${{ vars.SLACK_RELEASE_SHARE_OWNER_ID || 'U02C6LA102G' }}
+          SHARE_B64: ${{ github.event.client_payload.share_b64 }}
+          VERSION: ${{ needs.resolve-inputs.outputs.version }}
+        shell: bash
+        run: |
+          if [[ -z "${SLACK_WEBHOOK_URL}" ]]; then
+            echo "deploy bot webhook is not set. Skip share notes."
+            exit 0
+          fi
+          NOTES=$(printf '%s' "${SHARE_B64}" | base64 -d 2>/dev/null || true)
+          if [[ -z "${NOTES//[[:space:]]/}" ]]; then
+            echo "share 문구 없음 (SDK PR 본문 share 구간) — 건너뜀"
+            exit 0
+          fi
+          payload=$(jq -n --arg text "<@${OWNER_ID}>
+
+          TJJupiterVM SDK Android ${VERSION} 배포 · 데모앱 release/${VERSION} 검증 완료 — 외부 공유용 문구입니다.
+
+          ${NOTES}" '{text: $text}')
+          curl -fsS -X POST -H 'Content-type: application/json' --data "$payload" "$SLACK_WEBHOOK_URL"
+
       - name: Notify Slack (Failure)
-        if: ${{ needs.verify.result != 'success' }}
+        if: ${{ needs.verify.result != 'success' || needs.bump.result == 'failure' }}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         shell: bash
