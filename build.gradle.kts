@@ -26,10 +26,11 @@ val syncReadmeVersion by tasks.registering {
                 append(end)
             }
             val pattern = Regex("$start[\\s\\S]*?$end")
+            // 마커가 없으면 README 를 그대로 둔다 (끝에 블록을 덧붙이지 않음 — 2026-11-20 release/1.0.26 자동 bump 때 README 끝에 붙던 문제)
             return if (pattern.containsMatchIn(content)) {
                 content.replace(pattern, Matcher.quoteReplacement(replacement))
             } else {
-                "$content\n\n$replacement\n"
+                content
             }
         }
 
@@ -56,7 +57,7 @@ val syncReadmeVersion by tasks.registering {
             content = original,
             start = "<!-- JUPITER_VM_SDK_VERSION_START -->",
             end = "<!-- JUPITER_VM_SDK_VERSION_END -->",
-            body = "Jupiter VM SDK version: $jupiterVmSdkVersion"
+            body = "Jupiter VM SDK (JitPack): com.github.tjlabs:TJJupiterVM-sdk-android $jupiterVmSdkVersion"
         )
         val updated = replaceBetweenMarkers(
             content = withVmSdk,
